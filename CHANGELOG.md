@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.6 (2025-03-26)
+
+- update binaries
+
+
 ## v0.0.5 (2025-03-26)
 
 - npm readme
