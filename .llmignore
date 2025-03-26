@@ -1,0 +1,51 @@
+# Default .llmignore created by llmify
+# Add or remove patterns as needed
+
+# Package lock files (large, machine-generated)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+composer.lock
+Cargo.lock
+Gemfile.lock
+go.sum
+
+# Build output and artifacts
+dist/
+build/
+coverage/
+*.min.js
+*.min.css
+
+# Large data files
+*.csv
+*.xlsx
+*.parquet
+*.sql
+*.db
+*.sqlite
+
+# Images and media (binary content)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico
+*.svg
+*.webp
+
+# Generated or compiled content
+**/*.map
+**/__pycache__/
+**/.pytest_cache/
+**/.next/
+**/.nuxt/
+
+# Machine-specific configuration
+.DS_Store
+Thumbs.db
+.env.local
+.idea/
+.vscode/
+*.swp
+*.swo
