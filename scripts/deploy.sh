@@ -36,6 +36,8 @@ fi
 
 # Create directories
 mkdir -p dist/release
+# Ensure npm/bin directory exists
+mkdir -p npm/bin
 
 # Check for uncommitted changes
 if ! git diff-index --quiet HEAD --; then
@@ -66,16 +68,22 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     GOARCH=${PLATFORM#*/}
     BINARY_NAME="llmify"
     ARCHIVE_NAME="llmify-${VERSION_NUM}-${GOOS}-${GOARCH}"
+    NPM_BINARY_NAME="npm/bin/llmify-${GOOS}-${GOARCH}"
     
     if [ "$GOOS" = "windows" ]; then
         BINARY_NAME="${BINARY_NAME}.exe"
         ARCHIVE_NAME="${ARCHIVE_NAME}.zip"
+        NPM_BINARY_NAME="${NPM_BINARY_NAME}.exe"
     else
         ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
     fi
     
     echo -e "${BLUE}Building for ${GOOS}/${GOARCH}...${NC}"
     GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.buildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o "dist/release/${BINARY_NAME}" .
+    
+    # Copy binary to npm/bin directory
+    cp "dist/release/${BINARY_NAME}" "${NPM_BINARY_NAME}"
+    echo -e "${GREEN}✓ Copied binary to npm/bin/${NC}"
     
     # Create archive
     pushd dist/release > /dev/null
