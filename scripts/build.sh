@@ -21,6 +21,9 @@ echo -e "${BLUE}Version: ${VERSION}, Commit: ${COMMIT}${NC}"
 # Create build directory if it doesn't exist
 mkdir -p bin
 
+# Ensure npm/bin directory exists
+mkdir -p npm/bin
+
 # Build for the current platform first for quick testing
 echo -e "${BLUE}Building for current platform...${NC}"
 go build -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" -o bin/llmify .
@@ -39,14 +42,20 @@ if [[ $BUILD_ALL == "y" ]]; then
         GOOS=${PLATFORM%/*}
         GOARCH=${PLATFORM#*/}
         OUTPUT_NAME="bin/llmify-${GOOS}-${GOARCH}"
+        NPM_OUTPUT_NAME="npm/bin/llmify-${GOOS}-${GOARCH}"
         
         if [ "$GOOS" = "windows" ]; then
             OUTPUT_NAME="${OUTPUT_NAME}.exe"
+            NPM_OUTPUT_NAME="${NPM_OUTPUT_NAME}.exe"
         fi
         
         echo -e "${BLUE}Building for ${GOOS}/${GOARCH}...${NC}"
         GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" -o "${OUTPUT_NAME}" .
-        echo -e "${GREEN}✓ Built ${OUTPUT_NAME}${NC}"
+        
+        # Copy binary to npm/bin directory
+        cp "${OUTPUT_NAME}" "${NPM_OUTPUT_NAME}"
+        
+        echo -e "${GREEN}✓ Built ${OUTPUT_NAME} and copied to npm/bin${NC}"
     done
 fi
 
@@ -56,4 +65,4 @@ echo -e "${BLUE}Building npm package...${NC}"
 echo -e "${GREEN}✓ Built npm package${NC}"
 
 echo -e "${GREEN}Build complete!${NC}"
-echo -e "Binaries are available in the ${BLUE}bin/${NC} directory" 
+echo -e "Binaries are available in the ${BLUE}bin/${NC} directory and ${BLUE}npm/bin/${NC} directory" 
