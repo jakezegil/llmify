@@ -1,6 +1,6 @@
 ============================================================
 Project Root: /Users/jake/llmify
-Generated At: 2025-03-26T10:13:10-04:00
+Generated At: 2025-03-26T11:38:23-04:00
 ============================================================
 
 ## File Tree Structure
@@ -8,20 +8,28 @@ Generated At: 2025-03-26T10:13:10-04:00
 ```
 llmify/
 ├── .git/
+├── bin/
+├── dist/
 ├── npm/
 │   ├── bin/
 │   ├── .npmignore
 │   ├── cli.js
 │   ├── package.json
 │   └── README.md
+├── scripts/
+│   ├── build.sh
+│   ├── deploy.sh
+│   ├── install.sh
+│   ├── quickstart.sh
+│   └── README.md
 ├── .gitignore
+├── .llmignore
 ├── build-binaries.sh
+├── CHANGELOG.md
 ├── crawler.go
-├── dir_test.txt
 ├── go.mod
-├── go.sum
+├── LICENSE
 ├── main.go
-├── path_test.txt
 ├── README.md
 ├── tree.go
 └── utils.go
@@ -34,114 +42,154 @@ llmify/
 ### File: .gitignore
 
 ```gitignore
-# Dependencies
-node_modules/
-/.pnp
-.pnp.js
-package-lock.json
-yarn.lock
+# Build artifacts
+# Note: All build and deployment scripts (*.sh, *.bat, etc.) are intentionally NOT ignored
+/bin/
+/dist/
+/llmify
+/llmify-*
+*.exe
+*.out
 
-# Testing
-/coverage
-.nyc_output
+# Go specific
+*.dll
+*.so
+*.dylib
+*.test
+go.work
 
-# Production build files
-/build
-/dist
-/.next/
-/out/
+# npm directory
+npm/node_modules/
+npm/coverage/
+npm/dist/
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env*.local
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Editor and IDE files
+# Editor and OS files
 .idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
-*.sublime-*
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
-.DS_Store
-.directory
-Thumbs.db
 
-# Cache and temporary files
-.eslintcache
-.stylelintcache
-.cache/
-.parcel-cache/
-.webpack/
-.serverless/
-.fusebox/
-.dynamodb/
-.tern-port
-.tmp/
-temp/
+# Logs and debug
+*.log
+npm-debug.log*
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-ENV/
-env/
-pip-debug.log
+# Environment and secrets
+.env
+.env.*
 
-# Ruby
-*.gem
-*.rbc
-/.config
-/coverage/
-/spec/reports/
-/test/tmp/
-/test/version_tmp/
-.rvmrc
-.ruby-version
-.ruby-gemset
+# Test files that shouldn't be included in version control
+/testdata/
+/tmp/
+*.tmp 
+```
 
-# Java
-*.class
-*.jar
-*.war
-*.ear
-*.zip
-target/
-.gradle/
+---
+
+### File: .llmignore
+
+```llmignore
+# Default .llmignore created by llmify
+# Add or remove patterns as needed
+
+# Package lock files (large, machine-generated)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+composer.lock
+Cargo.lock
+Gemfile.lock
+go.sum
+
+# Build output and artifacts
+dist/
 build/
+coverage/
+*.min.js
+*.min.css
 
-# Swift and Xcode
-*.xcodeproj/
-*.xcworkspace/
-xcuserdata/
-*.pbxuser
-*.mode1v3
-*.mode2v3
-*.perspectivev3
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
+# Large data files
+*.csv
+*.xlsx
+*.parquet
+*.sql
+*.db
+*.sqlite
 
-# Local History
-.history/ 
+# Images and media (binary content)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico
+*.svg
+*.webp
+
+# Generated or compiled content
+**/*.map
+**/__pycache__/
+**/.pytest_cache/
+**/.next/
+**/.nuxt/
+
+# Machine-specific configuration
+.DS_Store
+Thumbs.db
+.env.local
+.idea/
+.vscode/
+*.swp
+*.swo
+
+```
+
+---
+
+### File: CHANGELOG.md
+
+```md
+# Changelog
+
+## v0.0.2 (2025-03-26)
+
+- add dummy build script
+- initial release
+
+
+
+```
+
+---
+
+### File: LICENSE
+
+```
+MIT License
+
+Copyright (c) 2023-2024 Your Name or Organization
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. 
 ```
 
 ---
@@ -410,6 +458,76 @@ type CrawlResult struct {
 	IncludedCount int      // Count of files/dirs included (in tree)
 }
 
+// CreateDefaultLLMIgnoreFile creates a .llmignore file with common defaults
+func CreateDefaultLLMIgnoreFile(rootDir string) error {
+	llmignorePath := filepath.Join(rootDir, ".llmignore")
+
+	// Common files/patterns to exclude from LLM context
+	defaults := []string{
+		"# Default .llmignore created by llmify",
+		"# Add or remove patterns as needed",
+		"",
+		"# Package lock files (large, machine-generated)",
+		"package-lock.json",
+		"yarn.lock",
+		"pnpm-lock.yaml",
+		"composer.lock",
+		"Cargo.lock",
+		"Gemfile.lock",
+		"go.sum",
+		"",
+		"# Build output and artifacts",
+		"dist/",
+		"build/",
+		"coverage/",
+		"*.min.js",
+		"*.min.css",
+		"",
+		"# Large data files",
+		"*.csv",
+		"*.xlsx",
+		"*.parquet",
+		"*.sql",
+		"*.db",
+		"*.sqlite",
+		"",
+		"# Images and media (binary content)",
+		"*.jpg",
+		"*.jpeg",
+		"*.png",
+		"*.gif",
+		"*.ico",
+		"*.svg",
+		"*.webp",
+		"",
+		"# Generated or compiled content",
+		"**/*.map",
+		"**/__pycache__/",
+		"**/.pytest_cache/",
+		"**/.next/",
+		"**/.nuxt/",
+		"",
+		"# Machine-specific configuration",
+		".DS_Store",
+		"Thumbs.db",
+		".env.local",
+		".idea/",
+		".vscode/",
+		"*.swp",
+		"*.swo",
+	}
+
+	// Join lines with newlines and write to file
+	content := strings.Join(defaults, "\n") + "\n"
+
+	// Write to file
+	if err := WriteStringToFile(llmignorePath, content); err != nil {
+		return fmt.Errorf("creating default .llmignore file: %w", err)
+	}
+
+	return nil
+}
+
 // LoadIgnoreMatcher loads ignore rules from .gitignore and .llmignore.
 func LoadIgnoreMatcher(rootDir string, useGitignore bool, useLLMIgnore bool) (*gitignore.GitIgnore, error) {
 	var patterns []string
@@ -437,6 +555,17 @@ func LoadIgnoreMatcher(rootDir string, useGitignore bool, useLLMIgnore bool) (*g
 	}
 
 	if useLLMIgnore {
+		// Check if .llmignore exists, create it with defaults if not
+		if _, err := os.Stat(llmignorePath); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "No .llmignore found. Creating one with default patterns...\n")
+			if err := CreateDefaultLLMIgnoreFile(rootDir); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to create default .llmignore: %v\n", err)
+				// Continue without .llmignore
+			} else {
+				fmt.Fprintf(os.Stderr, "Created default .llmignore file at %s\n", llmignorePath)
+			}
+		}
+
 		llmLines, err := readFileLines(llmignorePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: %v\n", err) // Log error but continue
@@ -753,817 +882,6 @@ func BuildOutputContent(rootDir string, result *CrawlResult, includeHeader bool)
 	return builder.String(), nil
 }
 
-```
-
----
-
-### File: dir_test.txt
-
-```txt
-============================================================
-Project Root: /Users/jake/cli-tools/llmify
-Generated At: 2025-03-26T09:55:14-04:00
-============================================================
-
-## File Tree Structure
-
-```
-llmify/
-└── test_dir/
-    ├── crawler.go
-    ├── main.go
-    ├── tree.go
-    └── utils.go
-```
-
-============================================================
-
-## File Contents
-
-### File: test_dir/crawler.go
-
-```go
-package main
-
-import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
-	"time"
-
-	gitignore "github.com/sabhiram/go-gitignore"
-)
-
-// CrawlResult holds the results of the crawl operation.
-type CrawlResult struct {
-	IncludedFiles []string // List of relative paths to include
-	FileTree      string   // Generated file tree string
-	ExcludedCount int      // Count of files/dirs excluded
-	IncludedCount int      // Count of files/dirs included (in tree)
-}
-
-// LoadIgnoreMatcher loads ignore rules from .gitignore and .llmignore.
-func LoadIgnoreMatcher(rootDir string, useGitignore bool, useLLMIgnore bool) (*gitignore.GitIgnore, error) {
-	var patterns []string
-	gitignorePath := filepath.Join(rootDir, ".gitignore")
-	llmignorePath := filepath.Join(rootDir, ".llmignore")
-
-	readFileLines := func(path string) ([]string, error) {
-		content, err := os.ReadFile(path)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return []string{}, nil // File not existing is not an error here
-			}
-			return nil, fmt.Errorf("reading ignore file %s: %w", path, err)
-		}
-		return strings.Split(string(content), "\n"), nil
-	}
-
-	if useGitignore {
-		gitLines, err := readFileLines(gitignorePath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %v\n", err) // Log error but continue
-		} else {
-			patterns = append(patterns, gitLines...)
-		}
-	}
-
-	if useLLMIgnore {
-		llmLines, err := readFileLines(llmignorePath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %v\n", err) // Log error but continue
-		} else {
-			patterns = append(patterns, llmLines...)
-		}
-	}
-
-	// Add common defaults that should always be ignored
-	patterns = append(patterns,
-		".git/",         // Crucial
-		"__pycache__/",  // Python cache
-		"node_modules/", // Node.js dependencies
-		"vendor/",       // Go dependencies (often)
-		"build/",        // Common build output
-		"dist/",         // Common distribution output
-		"target/",       // Common build output (Java/Rust)
-		"*.pyc",         // Python bytecode
-		"*.pyo",
-		"*.class",   // Java bytecode
-		"*.log",     // Log files
-		"*.swp",     // Vim swap files
-		".DS_Store", // macOS metadata
-		"Thumbs.db", // Windows metadata
-		// Add more common temporary/build/cache files if needed
-	)
-
-	// Ensure rootDir is absolute for reliable matching
-	_, err := filepath.Abs(rootDir)
-	if err != nil {
-		return nil, fmt.Errorf("getting absolute path for root %s: %w", rootDir, err)
-	}
-
-	// go-gitignore expects patterns relative to the root where .gitignore would be
-	ignorer := gitignore.CompileIgnoreLines(patterns...)
-	// Note: The go-gitignore library doesn't have AddPatterns method
-	// We're already compiling with patterns relative to the root
-
-	return ignorer, nil
-}
-
-// CrawlProject walks the directory, applies filters, and gathers content.
-func CrawlProject(
-	rootDir string,
-	outputFilename string,
-	targetPathRel string, // New: Relative path to filter by
-	ignorer *gitignore.GitIgnore,
-	cmdExcludes []string, // Patterns from command line --exclude
-	cmdIncludes []string, // Patterns from command line --include
-	maxDepth int,
-	excludeBinary bool,
-	verbose bool,
-) (*CrawlResult, error) {
-	absRootDir, err := filepath.Abs(rootDir)
-	if err != nil {
-		return nil, fmt.Errorf("getting absolute path for %s: %w", rootDir, err)
-	}
-	absOutputFilename := filepath.Join(absRootDir, outputFilename) // Get absolute path for output file
-
-	// Determine absolute target path if provided
-	var absTargetPath string
-	var isTargetPathDir bool
-	if targetPathRel != "" {
-		absTargetPath = filepath.Join(absRootDir, targetPathRel)
-		targetInfo, err := os.Stat(absTargetPath)
-		// We assume stat worked because main.go checked it
-		if err != nil {
-			// This should ideally not happen due to checks in main.go, but handle defensively
-			return nil, fmt.Errorf("cannot stat target path %s during crawl: %w", absTargetPath, err)
-		}
-		isTargetPathDir = targetInfo.IsDir()
-	}
-
-	// Compile command-line patterns (using gitignore syntax for simplicity)
-	excludeMatcher := gitignore.CompileIgnoreLines(cmdExcludes...)
-	includeMatcher := gitignore.CompileIgnoreLines(cmdIncludes...) // Note: includes need careful handling
-
-	includedFiles := []string{}
-	includedPathsForTree := make(map[string]os.DirEntry) // For building the tree
-	excludedCount := 0
-	includedCount := 0
-
-	walkErr := filepath.WalkDir(absRootDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			// Error accessing a file/directory, report and potentially skip
-			fmt.Fprintf(os.Stderr, "Warning: Error accessing %s: %v\n", path, err)
-			if d != nil && d.IsDir() {
-				return filepath.SkipDir // Skip contents of this directory
-			}
-			return nil // Skip this file/entry
-		}
-
-		// Use absolute path for most checks
-		absPath := path // WalkDir provides absolute paths if root is absolute
-
-		// --- Filtering Logic ---
-
-		// 0. Get relative path for matching against *patterns* and for final output list
-		relPath, err := filepath.Rel(absRootDir, absPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Could not get relative path for %s: %v\n", absPath, err)
-			return nil // Skip if relative path fails
-		}
-		if relPath == "." { // Skip the root directory itself from inclusion checks, but don't skip walk
-			return nil
-		}
-
-		// A. Check --path filter FIRST if provided
-		if absTargetPath != "" {
-			isInsideTargetPath := false
-			if absPath == absTargetPath {
-				isInsideTargetPath = true // Exact match (could be file or dir)
-			} else if isTargetPathDir && strings.HasPrefix(absPath, absTargetPath+string(filepath.Separator)) {
-				isInsideTargetPath = true // Path is inside the target directory
-			}
-
-			if !isInsideTargetPath {
-				if verbose {
-					fmt.Printf("Exclude (outside --path %s): %s\n", targetPathRel, relPath)
-				}
-				excludedCount++
-				// Optimization: If it's a directory not matching the target prefix, skip it entirely
-				if d.IsDir() && !strings.HasPrefix(absTargetPath, absPath+string(filepath.Separator)) {
-					return filepath.SkipDir
-				}
-				return nil // Skip this file/entry
-			}
-		}
-
-		// Ensure paths use forward slashes for consistent matching with gitignore patterns
-		matchPath := filepath.ToSlash(relPath)
-		if d.IsDir() {
-			matchPath += "/" // Append slash for directories as gitignore patterns often expect
-		}
-
-		// 1. Check depth limit (relative path parts + 1 for root)
-		if maxDepth > 0 {
-			depth := len(strings.Split(filepath.ToSlash(relPath), "/"))
-			// Adjust depth logic slightly: root is depth 0, its children are depth 1
-			if depth > maxDepth {
-				if verbose {
-					fmt.Printf("Exclude (depth > %d): %s\n", maxDepth, relPath)
-				}
-				excludedCount++
-				if d.IsDir() {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-		}
-
-		// 2. Never include the output file itself
-		if absPath == absOutputFilename {
-			if verbose {
-				fmt.Printf("Exclude (output file): %s\n", relPath)
-			}
-			excludedCount++
-			if d.IsDir() {
-				return filepath.SkipDir
-			} // Should not happen for the output file, but check anyway
-			return nil
-		}
-
-		// 3. Check .gitignore / .llmignore patterns
-		if ignorer != nil && ignorer.MatchesPath(path) {
-			// Is there an explicit command-line include that overrides this?
-			isIncluded := includeMatcher != nil && includeMatcher.MatchesPath(path) // Check if explicitly included
-			if !isIncluded {
-				if verbose {
-					fmt.Printf("Exclude (ignore file): %s\n", relPath)
-				}
-				excludedCount++
-				if d.IsDir() {
-					return filepath.SkipDir
-				} // Skip ignored directories
-				return nil
-			}
-			if verbose {
-				fmt.Printf("Override ignore (cmd include): %s\n", relPath)
-			}
-		}
-
-		// 4. Check command-line exclude patterns
-		if excludeMatcher != nil && excludeMatcher.MatchesPath(path) {
-			// Is there an explicit command-line include that overrides this?
-			isIncluded := includeMatcher != nil && includeMatcher.MatchesPath(path) // Check if explicitly included
-			if !isIncluded {
-				if verbose {
-					fmt.Printf("Exclude (cmd exclude): %s\n", relPath)
-				}
-				excludedCount++
-				if d.IsDir() {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			if verbose {
-				fmt.Printf("Override cmd exclude (cmd include): %s\n", relPath)
-			}
-		}
-
-		// 5. If it's a file, check if it's binary (unless overridden by include)
-		if !d.IsDir() {
-			isIncluded := includeMatcher != nil && includeMatcher.MatchesPath(path)
-			if !isIncluded && excludeBinary {
-				isText, textCheckErr := IsLikelyTextFile(path)
-				if textCheckErr != nil {
-					fmt.Fprintf(os.Stderr, "Warning: Could not check file type for %s: %v\n", path, textCheckErr)
-					// Decide whether to include or exclude on error - let's exclude by default
-					isText = false
-				}
-				if !isText {
-					if verbose {
-						fmt.Printf("Exclude (binary): %s\n", relPath)
-					}
-					excludedCount++
-					return nil // Skip binary files
-				}
-			}
-		}
-
-		// --- If we reach here, the path should be included ---
-		if verbose {
-			fmt.Printf("Include: %s\n", relPath)
-		}
-		includedPathsForTree[path] = d // Store entry for tree building
-		includedCount++
-		if !d.IsDir() {
-			includedFiles = append(includedFiles, relPath) // Add relative path to list
-		}
-
-		return nil // Continue walking
-	})
-
-	if walkErr != nil {
-		return nil, fmt.Errorf("error during directory walk: %w", walkErr)
-	}
-
-	// Sort included files for consistent output
-	sort.Strings(includedFiles)
-
-	// Generate the file tree using only the included paths
-	includeCriteria := func(p string, d os.DirEntry) bool {
-		_, exists := includedPathsForTree[p]
-		return exists
-	}
-	treeString, err := GenerateFileTree(absRootDir, includeCriteria, maxDepth)
-	if err != nil {
-		return nil, fmt.Errorf("generating file tree: %w", err)
-	}
-
-	result := &CrawlResult{
-		IncludedFiles: includedFiles,
-		FileTree:      treeString,
-		ExcludedCount: excludedCount,
-		IncludedCount: includedCount, // This counts files and dirs added to the tree map
-	}
-
-	return result, nil
-}
-
-// BuildOutputContent combines tree and file contents into the final string.
-func BuildOutputContent(rootDir string, result *CrawlResult, includeHeader bool) (string, error) {
-	var builder strings.Builder
-	absRootDir, _ := filepath.Abs(rootDir) // Assume rootDir is valid now
-
-	// Optional Header
-	if includeHeader {
-		builder.WriteString("============================================================\n")
-		builder.WriteString(fmt.Sprintf("Project Root: %s\n", absRootDir))
-		builder.WriteString(fmt.Sprintf("Generated At: %s\n", time.Now().Format(time.RFC3339)))
-		// Could add command-line args used here too
-		builder.WriteString("============================================================\n\n")
-	}
-
-	// File Tree Section
-	builder.WriteString("## File Tree Structure\n\n")
-	builder.WriteString("```\n")
-	builder.WriteString(result.FileTree)
-	builder.WriteString("```\n\n")
-	builder.WriteString("============================================================\n\n")
-
-	// File Content Section
-	builder.WriteString("## File Contents\n\n")
-
-	separator := "\n\n---\n\n" // Separator between files
-
-	for i, relPath := range result.IncludedFiles {
-		fullPath := filepath.Join(absRootDir, relPath)
-		content, err := ReadFileContent(fullPath)
-		if err != nil {
-			// Log error but try to continue with other files
-			fmt.Fprintf(os.Stderr, "Warning: Failed to read content for %s: %v\n", relPath, err)
-			content = fmt.Sprintf("Error reading file: %v", err) // Include error message in output
-		}
-
-		// Add file path header
-		builder.WriteString(fmt.Sprintf("### File: %s\n\n", filepath.ToSlash(relPath))) // Use forward slashes
-		builder.WriteString("```")
-		// Try to detect language from extension for syntax highlighting hint
-		ext := strings.TrimPrefix(filepath.Ext(relPath), ".")
-		if ext != "" {
-			builder.WriteString(ext) // e.g., ```go, ```python
-		}
-		builder.WriteString("\n")
-		builder.WriteString(content)
-		builder.WriteString("\n```") // End code block
-
-		if i < len(result.IncludedFiles)-1 {
-			builder.WriteString(separator)
-		}
-	}
-
-	return builder.String(), nil
-}
-
-```
-
----
-
-### File: test_dir/main.go
-
-```go
-package main
-
-import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/spf13/cobra"
-)
-
-var (
-	outputFile    string
-	excludes      []string
-	includes      []string
-	targetPath    string
-	maxDepth      int
-	noGitignore   bool
-	noLLMignore   bool
-	excludeBinary bool
-	verbose       bool
-	includeHeader bool
-	rootDir       string // Root directory for the crawl
-)
-
-func main() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-var rootCmd = &cobra.Command{
-	Use:   "llmify [directory]",
-	Short: "Generates a concatenated text file (llm.txt) of project code and file tree for LLM context.",
-	Long: `Crawls a project directory, respects .gitignore and .llmignore rules,
-optionally filters by a specific sub-path, and creates a single text file
-containing a file tree visualization followed by the contents of all
-included text files. Useful for providing context to Large Language Models.
-
-By default, it operates in the current working directory.`,
-	Args: cobra.MaximumNArgs(1), // Allow zero or one argument (the directory)
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Determine root directory
-		if len(args) > 0 {
-			rootDir = args[0]
-		} else {
-			var err error
-			rootDir, err = os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get current working directory: %w", err)
-			}
-		}
-
-		// Validate root directory exists
-		info, err := os.Stat(rootDir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("root directory not found: %s", rootDir)
-			}
-			return fmt.Errorf("failed to access root directory %s: %w", rootDir, err)
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("specified path is not a directory: %s", rootDir)
-		}
-
-		// Normalize the target path relative to the root directory
-		var absTargetPath string
-		if targetPath != "" {
-			// Clean the path and make it relative to rootDir
-			targetPath = filepath.Clean(targetPath)
-			// Ensure it doesn't try to escape the root directory
-			if strings.HasPrefix(targetPath, ".."+string(filepath.Separator)) || targetPath == ".." {
-				return fmt.Errorf("target path cannot be outside the root directory: %s", targetPath)
-			}
-			absTargetPath = filepath.Join(rootDir, targetPath)
-
-			// Check if the target path exists
-			_, err := os.Stat(absTargetPath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					return fmt.Errorf("target path not found: %s", absTargetPath)
-				}
-				return fmt.Errorf("failed to access target path %s: %w", absTargetPath, err)
-			}
-		}
-
-		if verbose {
-			fmt.Printf("Starting crawl in: %s\n", rootDir)
-			if targetPath != "" {
-				fmt.Printf("Filtering for specific path: %s (absolute: %s)\n", targetPath, absTargetPath)
-			}
-			fmt.Printf("Output file: %s\n", outputFile)
-			fmt.Printf("Using .gitignore: %t\n", !noGitignore)
-			fmt.Printf("Using .llmignore: %t\n", !noLLMignore)
-			fmt.Printf("Excluding binary files: %t\n", excludeBinary)
-			fmt.Printf("Max depth: %d (0 means unlimited)\n", maxDepth)
-			fmt.Printf("Command excludes: %v\n", excludes)
-			fmt.Printf("Command includes: %v\n", includes)
-		}
-
-		// --- Main Logic ---
-		// 1. Load ignore rules
-		ignorer, err := LoadIgnoreMatcher(rootDir, !noGitignore, !noLLMignore)
-		if err != nil {
-			return fmt.Errorf("failed to load ignore patterns: %w", err)
-		}
-
-		// 2. Crawl project
-		crawlResult, err := CrawlProject(rootDir, outputFile, targetPath, ignorer, excludes, includes, maxDepth, excludeBinary, verbose)
-		if err != nil {
-			return fmt.Errorf("failed to crawl project: %w", err)
-		}
-
-		// 3. Build the final output content
-		outputContent, err := BuildOutputContent(rootDir, crawlResult, includeHeader)
-		if err != nil {
-			return fmt.Errorf("failed to build output content: %w", err)
-		}
-
-		// 4. Write to output file
-		// Ensure the output path is relative to the CWD *unless* an absolute path was given
-		outputPath := outputFile
-		if !filepath.IsAbs(outputFile) {
-			cwd, _ := os.Getwd() // Error getting CWD unlikely after initial checks
-			outputPath = filepath.Join(cwd, outputFile)
-		} else {
-			// If outputFile is absolute, ensure rootDir comparison works correctly in CrawlProject
-			// This was handled by using absolute paths internally in CrawlProject
-		}
-
-		err = WriteStringToFile(outputPath, outputContent)
-		if err != nil {
-			return fmt.Errorf("failed to write output file %s: %w", outputPath, err)
-		}
-
-		fmt.Printf("Successfully generated LLM context file: %s\n", outputPath)
-		fmt.Printf("Included %d files/directories in the context.\n", crawlResult.IncludedCount)
-		if crawlResult.ExcludedCount > 0 {
-			fmt.Printf("Excluded %d files/directories based on rules.\n", crawlResult.ExcludedCount)
-		}
-		return nil
-	},
-}
-
-func init() {
-	// Setup flags using Cobra
-	rootCmd.Flags().StringVarP(&outputFile, "output", "o", "llm.txt", "Name of the output file")
-	rootCmd.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Glob patterns to exclude (can be used multiple times)")
-	rootCmd.Flags().StringSliceVarP(&includes, "include", "i", []string{}, "Glob patterns to include (overrides excludes, use carefully)")
-	rootCmd.Flags().StringVarP(&targetPath, "path", "p", "", "Only include files/directories within this specific relative path")
-	rootCmd.Flags().IntVarP(&maxDepth, "max-depth", "d", 0, "Maximum directory depth to crawl (0 for unlimited)")
-	rootCmd.Flags().BoolVar(&noGitignore, "no-gitignore", false, "Do not use .gitignore rules")
-	rootCmd.Flags().BoolVar(&noLLMignore, "no-llmignore", false, "Do not use .llmignore rules")
-	rootCmd.Flags().BoolVar(&excludeBinary, "exclude-binary", true, "Attempt to exclude binary files (based on content detection)")
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging to stderr")
-	rootCmd.Flags().BoolVar(&includeHeader, "header", true, "Include a header with project root and timestamp in the output file")
-
-	// Tie persistent flags if needed across subcommands (though we only have one here)
-	// rootCmd.PersistentFlags().StringVar(...)
-}
-
-```
-
----
-
-### File: test_dir/tree.go
-
-```go
-package main
-
-import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
-)
-
-// GenerateFileTree creates a string representation of the directory structure.
-func GenerateFileTree(root string, includeCriteria func(path string, d os.DirEntry) bool, maxDepth int) (string, error) {
-	var builder strings.Builder
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return "", fmt.Errorf("getting absolute path for %s: %w", root, err)
-	}
-	builder.WriteString(fmt.Sprintf("%s/\n", filepath.Base(absRoot))) // Add root dir name
-
-	err = walkTree(absRoot, "", true, &builder, includeCriteria, maxDepth, 0)
-	if err != nil {
-		return "", err
-	}
-	return builder.String(), nil
-}
-
-func walkTree(
-	currentPath string,
-	prefix string,
-	isRootDir bool, // Flag to handle prefix differently for root's children
-	builder *strings.Builder,
-	includeCriteria func(path string, d os.DirEntry) bool,
-	maxDepth int,
-	currentDepth int,
-) error {
-	if maxDepth > 0 && currentDepth >= maxDepth {
-		return nil
-	}
-
-	// Read directory entries
-	entries, err := os.ReadDir(currentPath)
-	if err != nil {
-		// Don't fail the whole process, just note the error
-		fmt.Fprintf(os.Stderr, "Warning: Cannot read directory %s: %v\n", currentPath, err)
-		return nil // Continue walking other parts
-	}
-
-	// Filter entries based on include criteria
-	filteredEntries := []os.DirEntry{}
-	for _, entry := range entries {
-		fullPath := filepath.Join(currentPath, entry.Name())
-		if includeCriteria(fullPath, entry) {
-			filteredEntries = append(filteredEntries, entry)
-		}
-	}
-
-	// Sort entries: directories first, then files, alphabetically
-	sort.Slice(filteredEntries, func(i, j int) bool {
-		infoI, errI := filteredEntries[i].Info()
-		infoJ, errJ := filteredEntries[j].Info()
-		if errI != nil || errJ != nil {
-			// Handle error case if needed, maybe sort by name only
-			return strings.ToLower(filteredEntries[i].Name()) < strings.ToLower(filteredEntries[j].Name())
-		}
-		if infoI.IsDir() != infoJ.IsDir() {
-			return infoI.IsDir() // Directories first
-		}
-		return strings.ToLower(infoI.Name()) < strings.ToLower(infoJ.Name()) // Then sort by name
-	})
-
-	for i, entry := range filteredEntries {
-		isLast := i == len(filteredEntries)-1
-		connector := "├── "
-		childPrefix := "│   "
-		if isLast {
-			connector = "└── "
-			childPrefix = "    "
-		}
-
-		// For the immediate children of the root, don't add the initial prefix
-		currentPrefix := prefix
-		if isRootDir {
-			currentPrefix = ""
-		}
-
-		entryPath := filepath.Join(currentPath, entry.Name())
-
-		if entry.IsDir() {
-			builder.WriteString(fmt.Sprintf("%s%s%s/\n", currentPrefix, connector, entry.Name()))
-			// Recurse into subdirectory
-			err := walkTree(entryPath, currentPrefix+childPrefix, false, builder, includeCriteria, maxDepth, currentDepth+1)
-			if err != nil {
-				// Propagate error up if needed, or log and continue
-				fmt.Fprintf(os.Stderr, "Warning: Error walking subdirectory %s: %v\n", entryPath, err)
-			}
-		} else {
-			builder.WriteString(fmt.Sprintf("%s%s%s\n", currentPrefix, connector, entry.Name()))
-		}
-	}
-	return nil
-}
-
-```
-
----
-
-### File: test_dir/utils.go
-
-```go
-package main
-
-import (
-	"bufio"
-	"bytes"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"unicode/utf8"
-)
-
-// DefaultBinaryExtensions is a set of common binary file extensions.
-// We use a map for quick lookups.
-var DefaultBinaryExtensions = map[string]struct{}{
-	".png": {}, ".jpg": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".tiff": {}, ".ico": {},
-	".pdf": {},
-	".mp3": {}, ".wav": {}, ".ogg": {}, ".flac": {},
-	".mp4": {}, ".avi": {}, ".mov": {}, ".mkv": {},
-	".zip": {}, ".gz": {}, ".tar": {}, ".rar": {}, ".7z": {},
-	".exe": {}, ".dll": {}, ".so": {}, ".dylib": {}, ".app": {},
-	".o": {}, ".a": {}, ".obj": {},
-	".class": {}, ".jar": {},
-	".pyc": {}, ".pyo": {},
-	".sqlite": {}, ".db": {},
-	".woff": {}, ".woff2": {}, ".ttf": {}, ".otf": {}, ".eot": {},
-	".DS_Store": {}, // Common macOS file
-}
-
-// IsLikelyTextFile checks if a file is likely text-based.
-// It focuses on content-based detection by analyzing a small chunk to detect binary indicators.
-func IsLikelyTextFile(path string) (bool, error) {
-	// We still use extension checks as a fast first pass
-	ext := strings.ToLower(filepath.Ext(path))
-	if _, isBinaryExt := DefaultBinaryExtensions[ext]; isBinaryExt {
-		return false, nil
-	}
-
-	// Try reading a small chunk to detect binary content
-	file, err := os.Open(path)
-	if err != nil {
-		// If we can't open it, we probably can't read it anyway
-		return false, fmt.Errorf("could not open file %s: %w", path, err)
-	}
-	defer file.Close()
-
-	// Read a larger chunk (4KB) for more accurate detection
-	buffer := make([]byte, 4096)
-	n, err := file.Read(buffer)
-	if err != nil && err != io.EOF {
-		return false, fmt.Errorf("could not read file %s: %w", path, err)
-	}
-
-	if n == 0 {
-		return true, nil // Empty file is considered text
-	}
-
-	chunk := buffer[:n]
-
-	// Check for non-UTF8 sequences
-	if !utf8.Valid(chunk) {
-		// Before declaring it binary, check if it might be UTF-16 BOM
-		if len(chunk) >= 2 {
-			if (chunk[0] == 0xFE && chunk[1] == 0xFF) || (chunk[0] == 0xFF && chunk[1] == 0xFE) {
-				// Looks like UTF-16, which we won't handle correctly. Treat as binary.
-				return false, nil
-			}
-		}
-		return false, nil // Contains invalid UTF-8 sequences
-	}
-
-	// Check for excessive null bytes (common in binary files)
-	// Allow a very small number for text files with occasional nulls
-	nullCount := bytes.Count(chunk, []byte{0})
-	if nullCount > 2 { // More than 2 null bytes in first 4KB suggests binary
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// ReadFileContent reads file content as a string, trying UTF-8 then Latin-1.
-func ReadFileContent(path string) (string, error) {
-	contentBytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("reading file %s: %w", path, err)
-	}
-
-	if utf8.Valid(contentBytes) {
-		return string(contentBytes), nil
-	}
-
-	// If not valid UTF-8, try Latin-1 (ISO-8859-1) as a fallback
-	var latin1Builder strings.Builder
-	latin1Builder.Grow(len(contentBytes))
-	for _, b := range contentBytes {
-		latin1Builder.WriteRune(rune(b))
-	}
-	// Add a warning comment? Maybe not, let the LLM figure it out.
-	// fmt.Fprintf(os.Stderr, "Warning: File %s was not valid UTF-8, read as Latin-1.\n", path)
-	return latin1Builder.String(), nil
-
-	// Alternative: Use iconv or a more robust decoding library if needed,
-	// but for LLM context, Latin-1 fallback is often sufficient.
-}
-
-// WriteStringToFile writes a string to a file, creating directories if needed.
-func WriteStringToFile(filePath string, content string) error {
-	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating directory %s: %w", dir, err)
-	}
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("creating file %s: %w", filePath, err)
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	_, err = writer.WriteString(content)
-	if err != nil {
-		return fmt.Errorf("writing to file %s: %w", filePath, err)
-	}
-	err = writer.Flush()
-	if err != nil {
-		return fmt.Errorf("flushing file %s: %w", filePath, err)
-	}
-	return nil
-}
-
-```
 ```
 
 ---
@@ -1581,31 +899,6 @@ require (
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 )
-
-```
-
----
-
-### File: go.sum
-
-```sum
-github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
-github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
-github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 h1:OkMGxebDjyw0ULyrTYWeN0UNCCkmCWfjPnIA2W6oviI=
-github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06/go.mod h1:+ePHsJ1keEjQtpvf9HHw0f4ZeJ0TLRsxhunSI2hYJSs=
-github.com/spf13/cobra v1.9.1 h1:CXSaggrXdbHK9CF+8ywj8Amf7PBRmPCOJugH954Nnlo=
-github.com/spf13/cobra v1.9.1/go.mod h1:nDyEzZ8ogv936Cinf6g1RU9MRY64Ir93oCnqb9wxYW0=
-github.com/spf13/pflag v1.0.6 h1:jFzHGLGAlb3ruxLB8MhbI6A8+AQX/2eW4qeyNZXNp2o=
-github.com/spf13/pflag v1.0.6/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
-github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 
 ```
 
@@ -2066,7 +1359,7 @@ child.on('exit', (code, signal) => {
 ```json
 {
   "name": "llmify",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "description": "A CLI tool that generates codebase context for LLMs",
   "license": "MIT",
   "author": "Jake <jakezegil@gmail.com>",
@@ -2099,166 +1392,528 @@ child.on('exit', (code, signal) => {
   ],
   "engines": {
     "node": ">=14"
+  },
+  "scripts": {
+    "build": "echo 'No build required'"
   }
-} 
+}
+
 ```
 
 ---
 
-### File: path_test.txt
+### File: scripts/README.md
 
-```txt
-============================================================
-Project Root: /Users/jake/cli-tools/llmify
-Generated At: 2025-03-26T09:55:00-04:00
-============================================================
+```md
+# LLMify Build and Deployment Scripts
 
-## File Tree Structure
+This directory contains scripts to simplify building, installing, and deploying LLMify.
 
+## Available Scripts
+
+### `build.sh`
+
+Builds LLMify binaries for the current platform and optionally for all supported platforms.
+
+```bash
+# Run from the project root
+./scripts/build.sh
 ```
-llmify/
-└── utils.go
+
+Features:
+- Builds a binary for your current platform
+- Optionally builds for all supported platforms (Linux, macOS, Windows)
+- Embeds version info from git
+- Also builds the npm package
+
+### `install.sh`
+
+Installs LLMify to your system (requires a built binary).
+
+```bash
+# Run from the project root
+./scripts/install.sh
 ```
 
-============================================================
+Features:
+- Automatically detects the best installation location
+- Adds LLMify to your PATH
+- Supports both user-local and system-wide installation
 
-## File Contents
+### `deploy.sh`
 
-### File: utils.go
+Prepares a release and optionally publishes it to GitHub.
 
-```go
-package main
-
-import (
-	"bufio"
-	"bytes"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"unicode/utf8"
-)
-
-// DefaultBinaryExtensions is a set of common binary file extensions.
-// We use a map for quick lookups.
-var DefaultBinaryExtensions = map[string]struct{}{
-	".png": {}, ".jpg": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".tiff": {}, ".ico": {},
-	".pdf": {},
-	".mp3": {}, ".wav": {}, ".ogg": {}, ".flac": {},
-	".mp4": {}, ".avi": {}, ".mov": {}, ".mkv": {},
-	".zip": {}, ".gz": {}, ".tar": {}, ".rar": {}, ".7z": {},
-	".exe": {}, ".dll": {}, ".so": {}, ".dylib": {}, ".app": {},
-	".o": {}, ".a": {}, ".obj": {},
-	".class": {}, ".jar": {},
-	".pyc": {}, ".pyo": {},
-	".sqlite": {}, ".db": {},
-	".woff": {}, ".woff2": {}, ".ttf": {}, ".otf": {}, ".eot": {},
-	".DS_Store": {}, // Common macOS file
-}
-
-// IsLikelyTextFile checks if a file is likely text-based.
-// It focuses on content-based detection by analyzing a small chunk to detect binary indicators.
-func IsLikelyTextFile(path string) (bool, error) {
-	// We still use extension checks as a fast first pass
-	ext := strings.ToLower(filepath.Ext(path))
-	if _, isBinaryExt := DefaultBinaryExtensions[ext]; isBinaryExt {
-		return false, nil
-	}
-
-	// Try reading a small chunk to detect binary content
-	file, err := os.Open(path)
-	if err != nil {
-		// If we can't open it, we probably can't read it anyway
-		return false, fmt.Errorf("could not open file %s: %w", path, err)
-	}
-	defer file.Close()
-
-	// Read a larger chunk (4KB) for more accurate detection
-	buffer := make([]byte, 4096)
-	n, err := file.Read(buffer)
-	if err != nil && err != io.EOF {
-		return false, fmt.Errorf("could not read file %s: %w", path, err)
-	}
-
-	if n == 0 {
-		return true, nil // Empty file is considered text
-	}
-
-	chunk := buffer[:n]
-
-	// Check for non-UTF8 sequences
-	if !utf8.Valid(chunk) {
-		// Before declaring it binary, check if it might be UTF-16 BOM
-		if len(chunk) >= 2 {
-			if (chunk[0] == 0xFE && chunk[1] == 0xFF) || (chunk[0] == 0xFF && chunk[1] == 0xFE) {
-				// Looks like UTF-16, which we won't handle correctly. Treat as binary.
-				return false, nil
-			}
-		}
-		return false, nil // Contains invalid UTF-8 sequences
-	}
-
-	// Check for excessive null bytes (common in binary files)
-	// Allow a very small number for text files with occasional nulls
-	nullCount := bytes.Count(chunk, []byte{0})
-	if nullCount > 2 { // More than 2 null bytes in first 4KB suggests binary
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// ReadFileContent reads file content as a string, trying UTF-8 then Latin-1.
-func ReadFileContent(path string) (string, error) {
-	contentBytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("reading file %s: %w", path, err)
-	}
-
-	if utf8.Valid(contentBytes) {
-		return string(contentBytes), nil
-	}
-
-	// If not valid UTF-8, try Latin-1 (ISO-8859-1) as a fallback
-	var latin1Builder strings.Builder
-	latin1Builder.Grow(len(contentBytes))
-	for _, b := range contentBytes {
-		latin1Builder.WriteRune(rune(b))
-	}
-	// Add a warning comment? Maybe not, let the LLM figure it out.
-	// fmt.Fprintf(os.Stderr, "Warning: File %s was not valid UTF-8, read as Latin-1.\n", path)
-	return latin1Builder.String(), nil
-
-	// Alternative: Use iconv or a more robust decoding library if needed,
-	// but for LLM context, Latin-1 fallback is often sufficient.
-}
-
-// WriteStringToFile writes a string to a file, creating directories if needed.
-func WriteStringToFile(filePath string, content string) error {
-	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating directory %s: %w", dir, err)
-	}
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("creating file %s: %w", filePath, err)
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	_, err = writer.WriteString(content)
-	if err != nil {
-		return fmt.Errorf("writing to file %s: %w", filePath, err)
-	}
-	err = writer.Flush()
-	if err != nil {
-		return fmt.Errorf("flushing file %s: %w", filePath, err)
-	}
-	return nil
-}
-
+```bash
+# Run from the project root
+./scripts/deploy.sh
 ```
+
+Features:
+- Creates release archives for all platforms
+- Updates the changelog
+- Creates a git tag
+- Can create a GitHub release (requires GitHub CLI)
+- Can publish the npm package
+
+### `quickstart.sh`
+
+The easiest way to get started with LLMify - builds and runs in one command.
+
+```bash
+# Run from the project root
+./scripts/quickstart.sh
+```
+
+Features:
+- Builds LLMify
+- Runs it on a directory of your choice
+- Shows a preview of the output
+
+## Making Scripts Executable
+
+Before using these scripts, make them executable:
+
+```bash
+# Run from the project root
+chmod +x scripts/*.sh
+```
+
+## For Windows Users
+
+These scripts are designed for Unix-like systems (Linux, macOS). Windows users can:
+
+1. Use Git Bash or WSL to run these scripts
+2. Use the manual build commands from the main README.md
+3. Download pre-built binaries from the releases page 
+```
+
+---
+
+### File: scripts/build.sh
+
+```sh
+#!/bin/bash
+set -e
+
+# Build script for LLMify
+# This script creates binaries for multiple platforms
+
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Building LLMify...${NC}"
+
+# Get current version from git tag or default to development
+VERSION=$(git describe --tags --always --abbrev=0 2>/dev/null || echo "dev")
+COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
+
+echo -e "${BLUE}Version: ${VERSION}, Commit: ${COMMIT}${NC}"
+
+# Create build directory if it doesn't exist
+mkdir -p bin
+
+# Build for the current platform first for quick testing
+echo -e "${BLUE}Building for current platform...${NC}"
+go build -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" -o bin/llmify .
+echo -e "${GREEN}✓ Built for current platform${NC}"
+
+# Ask if user wants to build for all platforms
+read -p "Build for all platforms? (y/n): " BUILD_ALL
+
+if [[ $BUILD_ALL == "y" ]]; then
+    echo -e "${BLUE}Building for all supported platforms...${NC}"
+    
+    # Define platforms
+    PLATFORMS=("linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64" "windows/amd64")
+    
+    for PLATFORM in "${PLATFORMS[@]}"; do
+        GOOS=${PLATFORM%/*}
+        GOARCH=${PLATFORM#*/}
+        OUTPUT_NAME="bin/llmify-${GOOS}-${GOARCH}"
+        
+        if [ "$GOOS" = "windows" ]; then
+            OUTPUT_NAME="${OUTPUT_NAME}.exe"
+        fi
+        
+        echo -e "${BLUE}Building for ${GOOS}/${GOARCH}...${NC}"
+        GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" -o "${OUTPUT_NAME}" .
+        echo -e "${GREEN}✓ Built ${OUTPUT_NAME}${NC}"
+    done
+fi
+
+# Build the npm CLI wrapper
+echo -e "${BLUE}Building npm package...${NC}"
+(cd npm && npm install && npm run build)
+echo -e "${GREEN}✓ Built npm package${NC}"
+
+echo -e "${GREEN}Build complete!${NC}"
+echo -e "Binaries are available in the ${BLUE}bin/${NC} directory" 
+```
+
+---
+
+### File: scripts/deploy.sh
+
+```sh
+#!/bin/bash
+set -e
+
+# Deployment script for LLMify
+# This script creates release assets and helps with GitHub releases
+
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Check for required tools
+REQUIRED_TOOLS=("git" "go" "npm" "gh")
+for tool in "${REQUIRED_TOOLS[@]}"; do
+    if ! command -v "$tool" &> /dev/null; then
+        echo -e "${RED}Error: $tool is not installed or not in PATH.${NC}"
+        
+        if [ "$tool" = "gh" ]; then
+            echo -e "The GitHub CLI ($tool) is required for this script."
+            echo -e "Install it from: ${BLUE}https://cli.github.com/${NC}"
+        fi
+        
+        exit 1
+    fi
+done
+
+echo -e "${BLUE}LLMify Deployment Script${NC}"
+
+# Check if we're in the repo root
+if [ ! -f "main.go" ] || [ ! -d "npm" ]; then
+    echo -e "${RED}Error: This script must be run from the repository root.${NC}"
+    exit 1
+fi
+
+# Create directories
+mkdir -p dist/release
+
+# Check for uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+    echo -e "${YELLOW}Warning: You have uncommitted changes.${NC}"
+    read -p "Continue anyway? (y/n): " CONTINUE
+    if [[ $CONTINUE != "y" ]]; then
+        echo -e "Exiting."
+        exit 0
+    fi
+fi
+
+# Get or prompt for version
+CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+echo -e "Current version: ${GREEN}${CURRENT_VERSION}${NC}"
+read -p "New version (leave empty to use current): " NEW_VERSION
+VERSION=${NEW_VERSION:-$CURRENT_VERSION}
+
+# Remove 'v' prefix for filenames if present
+VERSION_NUM=${VERSION#v}
+
+echo -e "${BLUE}Building release for version: ${VERSION}${NC}"
+
+# Build for all platforms
+echo -e "${BLUE}Building binaries for all platforms...${NC}"
+PLATFORMS=("linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64" "windows/amd64")
+for PLATFORM in "${PLATFORMS[@]}"; do
+    GOOS=${PLATFORM%/*}
+    GOARCH=${PLATFORM#*/}
+    BINARY_NAME="llmify"
+    ARCHIVE_NAME="llmify-${VERSION_NUM}-${GOOS}-${GOARCH}"
+    
+    if [ "$GOOS" = "windows" ]; then
+        BINARY_NAME="${BINARY_NAME}.exe"
+        ARCHIVE_NAME="${ARCHIVE_NAME}.zip"
+    else
+        ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
+    fi
+    
+    echo -e "${BLUE}Building for ${GOOS}/${GOARCH}...${NC}"
+    GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.buildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o "dist/release/${BINARY_NAME}" .
+    
+    # Create archive
+    pushd dist/release > /dev/null
+    
+    cp ../../README.md .
+    cp ../../LICENSE . 2>/dev/null || echo "No LICENSE file found"
+    
+    if [ "$GOOS" = "windows" ]; then
+        zip -q "${ARCHIVE_NAME}" "${BINARY_NAME}" README.md LICENSE 2>/dev/null
+    else
+        tar -czf "${ARCHIVE_NAME}" "${BINARY_NAME}" README.md LICENSE 2>/dev/null
+    fi
+    
+    # Remove binary and docs after archiving
+    rm "${BINARY_NAME}" README.md LICENSE 2>/dev/null
+    
+    popd > /dev/null
+    
+    echo -e "${GREEN}✓ Created ${ARCHIVE_NAME}${NC}"
+done
+
+# Build npm package
+echo -e "${BLUE}Building npm package...${NC}"
+(cd npm && npm version "$VERSION_NUM" --no-git-tag-version && npm install && npm run build)
+echo -e "${GREEN}✓ Built npm package${NC}"
+
+# Create or update changelog
+CHANGELOG_FILE="CHANGELOG.md"
+if [ ! -f "$CHANGELOG_FILE" ]; then
+    echo "# Changelog" > "$CHANGELOG_FILE"
+    echo "" >> "$CHANGELOG_FILE"
+fi
+
+echo -e "${BLUE}Updating changelog...${NC}"
+# Get git log since the last release tag
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+if [ -n "$LAST_TAG" ]; then
+    CHANGES=$(git log --pretty=format:"- %s" ${LAST_TAG}..HEAD)
+else
+    CHANGES=$(git log --pretty=format:"- %s")
+fi
+
+# Create new changelog section
+TEMP_CHANGELOG=$(mktemp)
+echo "# Changelog" > "$TEMP_CHANGELOG"
+echo "" >> "$TEMP_CHANGELOG"
+echo "## ${VERSION} ($(date '+%Y-%m-%d'))" >> "$TEMP_CHANGELOG"
+echo "" >> "$TEMP_CHANGELOG"
+echo "$CHANGES" >> "$TEMP_CHANGELOG"
+echo "" >> "$TEMP_CHANGELOG"
+tail -n +2 "$CHANGELOG_FILE" >> "$TEMP_CHANGELOG"
+mv "$TEMP_CHANGELOG" "$CHANGELOG_FILE"
+
+echo -e "${GREEN}✓ Updated changelog${NC}"
+
+# Create GitHub release
+echo -e "${BLUE}Do you want to create a GitHub release? (This requires gh CLI)${NC}"
+read -p "Create GitHub release? (y/n): " CREATE_RELEASE
+
+if [[ $CREATE_RELEASE == "y" ]]; then
+    echo -e "${BLUE}Creating GitHub release...${NC}"
+    
+    # Create a new tag if it's a new version
+    if [ "$NEW_VERSION" != "" ]; then
+        git add "$CHANGELOG_FILE" npm/package.json
+        git commit -m "Release $VERSION"
+        git tag -a "$VERSION" -m "Release $VERSION"
+        echo -e "${GREEN}✓ Created git tag ${VERSION}${NC}"
+    fi
+    
+    # Create release notes from changelog
+    RELEASE_NOTES=$(sed -n "/## ${VERSION}/,/## /p" "$CHANGELOG_FILE" | sed '1d;$d')
+    
+    # Push to GitHub
+    echo -e "${BLUE}Pushing changes to GitHub...${NC}"
+    git push && git push --tags
+    
+    # Create GitHub release
+    echo -e "${BLUE}Creating GitHub release...${NC}"
+    cd dist/release
+    gh release create "$VERSION" \
+        --title "$VERSION" \
+        --notes "$RELEASE_NOTES" \
+        *.tar.gz *.zip
+    
+    echo -e "${GREEN}✓ Created GitHub release${NC}"
+    
+    # Publish npm package
+    echo -e "${BLUE}Do you want to publish the npm package?${NC}"
+    read -p "Publish npm package? (y/n): " PUBLISH_NPM
+    
+    if [[ $PUBLISH_NPM == "y" ]]; then
+        echo -e "${BLUE}Publishing npm package...${NC}"
+        (cd ../../npm && npm publish)
+        echo -e "${GREEN}✓ Published npm package${NC}"
+    fi
+fi
+
+echo -e "\n${GREEN}Deployment preparation complete!${NC}"
+echo -e "Release archives are available in ${BLUE}dist/release/${NC}" 
+```
+
+---
+
+### File: scripts/install.sh
+
+```sh
+#!/bin/bash
+set -e
+
+# Installation script for LLMify
+# This script installs the LLMify binary to a location in your PATH
+
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Default installation directory
+DEFAULT_INSTALL_DIR="/usr/local/bin"
+USER_LOCAL_BIN="$HOME/bin"
+USER_LOCAL_BIN_ALTERNATE="$HOME/.local/bin"
+
+echo -e "${BLUE}LLMify Installation Script${NC}"
+
+# Check for binary in bin directory
+if [ -f "bin/llmify" ]; then
+    BINARY_PATH="bin/llmify"
+elif [ -f "./llmify" ]; then
+    BINARY_PATH="./llmify"
+else
+    echo -e "${RED}Error: LLMify binary not found!${NC}"
+    echo -e "Please run ${YELLOW}./scripts/build.sh${NC} first or make sure you're in the correct directory."
+    exit 1
+fi
+
+echo -e "${GREEN}Found binary at:${NC} $BINARY_PATH"
+
+# Determine best installation directory
+if [ -d "$DEFAULT_INSTALL_DIR" ] && [ -w "$DEFAULT_INSTALL_DIR" ]; then
+    # System-wide installation (if we have permission)
+    SUGGESTED_DIR="$DEFAULT_INSTALL_DIR"
+elif [ -d "$USER_LOCAL_BIN" ]; then
+    # User's ~/bin directory exists
+    SUGGESTED_DIR="$USER_LOCAL_BIN"
+elif [ -d "$USER_LOCAL_BIN_ALTERNATE" ]; then
+    # User's ~/.local/bin directory exists
+    SUGGESTED_DIR="$USER_LOCAL_BIN_ALTERNATE"
+else
+    # Create user's bin directory
+    mkdir -p "$USER_LOCAL_BIN"
+    SUGGESTED_DIR="$USER_LOCAL_BIN"
+    echo -e "${YELLOW}Created directory: ${SUGGESTED_DIR}${NC}"
+    echo -e "${YELLOW}You may need to add this to your PATH.${NC}"
+fi
+
+# Ask for installation directory
+read -p "Install directory [$SUGGESTED_DIR]: " INSTALL_DIR
+INSTALL_DIR=${INSTALL_DIR:-$SUGGESTED_DIR}
+
+# Create directory if it doesn't exist
+if [ ! -d "$INSTALL_DIR" ]; then
+    echo -e "${YELLOW}Directory $INSTALL_DIR doesn't exist. Creating it...${NC}"
+    mkdir -p "$INSTALL_DIR"
+fi
+
+# Check write permissions
+if [ ! -w "$INSTALL_DIR" ]; then
+    echo -e "${YELLOW}You don't have write permissions to $INSTALL_DIR${NC}"
+    echo -e "Trying with sudo..."
+    sudo cp "$BINARY_PATH" "$INSTALL_DIR/llmify"
+else
+    cp "$BINARY_PATH" "$INSTALL_DIR/llmify"
+fi
+
+# Make executable
+chmod +x "$INSTALL_DIR/llmify"
+
+echo -e "${GREEN}LLMify installed successfully to ${INSTALL_DIR}/llmify${NC}"
+
+# Check if directory is in PATH
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    echo -e "${YELLOW}Warning: $INSTALL_DIR is not in your PATH!${NC}"
+    echo -e "Add the following line to your ~/.bashrc, ~/.zshrc, or equivalent shell configuration file:"
+    echo -e "${BLUE}export PATH=\"\$PATH:$INSTALL_DIR\"${NC}"
+    echo -e "Then reload your shell configuration with: ${BLUE}source ~/.bashrc${NC} (or equivalent)"
+fi
+
+# Verify installation
+echo -e "${BLUE}Verifying installation...${NC}"
+if command -v "$INSTALL_DIR/llmify" &> /dev/null; then
+    echo -e "${GREEN}Installation verified! You can now use 'llmify' command.${NC}"
+else
+    echo -e "${YELLOW}Could not verify installation. You may need to restart your terminal.${NC}"
+fi
+
+echo -e "\n${GREEN}Installation complete!${NC}" 
+```
+
+---
+
+### File: scripts/quickstart.sh
+
+```sh
+#!/bin/bash
+set -e
+
+# Quickstart script for LLMify
+# This script builds and runs LLMify with a single command - perfect for first-time users
+
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}LLMify Quickstart${NC}"
+echo -e "This script will build and run LLMify in a single command."
+
+# Check if we're in the repo root
+if [ ! -f "main.go" ] || [ ! -d "npm" ]; then
+    echo -e "${RED}Error: This script must be run from the repository root.${NC}"
+    exit 1
+fi
+
+# Check for required tools
+echo -e "${BLUE}Checking requirements...${NC}"
+if ! command -v go &> /dev/null; then
+    echo -e "${RED}Error: Go is not installed or not in PATH.${NC}"
+    echo -e "Please install Go from: ${BLUE}https://golang.org/dl/${NC}"
+    exit 1
+fi
+
+# Create binary directory if it doesn't exist
+mkdir -p bin
+
+# Build for the current platform
+echo -e "${BLUE}Building LLMify...${NC}"
+go build -o bin/llmify .
+echo -e "${GREEN}✓ Build successful!${NC}"
+
+# Make executable
+chmod +x bin/llmify
+
+# Ask for input directory
+echo -e "${BLUE}Which directory would you like to analyze?${NC}"
+echo -e "Press Enter to use the current directory (LLMify itself), or specify a different path:"
+read -p "Directory: " TARGET_DIR
+TARGET_DIR=${TARGET_DIR:-.}
+
+# Ask for output file
+echo -e "${BLUE}Where would you like to save the output?${NC}"
+echo -e "Press Enter to use the default (llm.txt), or specify a different filename:"
+read -p "Output file: " OUTPUT_FILE
+OUTPUT_FILE=${OUTPUT_FILE:-llm.txt}
+
+# Run LLMify
+echo -e "${BLUE}Running LLMify on ${TARGET_DIR}...${NC}"
+./bin/llmify -o "${OUTPUT_FILE}" "${TARGET_DIR}"
+
+# Check if the output file was created
+if [ -f "${OUTPUT_FILE}" ]; then
+    echo -e "${GREEN}✓ Success! LLMify output saved to: ${OUTPUT_FILE}${NC}"
+    echo -e "File size: $(du -h "${OUTPUT_FILE}" | cut -f1)"
+    
+    # Show first few lines
+    echo -e "${BLUE}Preview:${NC}"
+    head -n 10 "${OUTPUT_FILE}"
+    echo -e "${YELLOW}... (output truncated) ...${NC}"
+    
+    echo -e "\n${GREEN}You can now use this file as context for your LLM!${NC}"
+else
+    echo -e "${RED}Something went wrong. The output file was not created.${NC}"
+fi 
 ```
 
 ---

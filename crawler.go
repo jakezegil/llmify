@@ -19,6 +19,76 @@ type CrawlResult struct {
 	IncludedCount int      // Count of files/dirs included (in tree)
 }
 
+// CreateDefaultLLMIgnoreFile creates a .llmignore file with common defaults
+func CreateDefaultLLMIgnoreFile(rootDir string) error {
+	llmignorePath := filepath.Join(rootDir, ".llmignore")
+
+	// Common files/patterns to exclude from LLM context
+	defaults := []string{
+		"# Default .llmignore created by llmify",
+		"# Add or remove patterns as needed",
+		"",
+		"# Package lock files (large, machine-generated)",
+		"package-lock.json",
+		"yarn.lock",
+		"pnpm-lock.yaml",
+		"composer.lock",
+		"Cargo.lock",
+		"Gemfile.lock",
+		"go.sum",
+		"",
+		"# Build output and artifacts",
+		"dist/",
+		"build/",
+		"coverage/",
+		"*.min.js",
+		"*.min.css",
+		"",
+		"# Large data files",
+		"*.csv",
+		"*.xlsx",
+		"*.parquet",
+		"*.sql",
+		"*.db",
+		"*.sqlite",
+		"",
+		"# Images and media (binary content)",
+		"*.jpg",
+		"*.jpeg",
+		"*.png",
+		"*.gif",
+		"*.ico",
+		"*.svg",
+		"*.webp",
+		"",
+		"# Generated or compiled content",
+		"**/*.map",
+		"**/__pycache__/",
+		"**/.pytest_cache/",
+		"**/.next/",
+		"**/.nuxt/",
+		"",
+		"# Machine-specific configuration",
+		".DS_Store",
+		"Thumbs.db",
+		".env.local",
+		".idea/",
+		".vscode/",
+		"*.swp",
+		"*.swo",
+	}
+
+	// Join lines with newlines and write to file
+	content := strings.Join(defaults, "\n") + "\n"
+
+	// Write to file
+	if err := WriteStringToFile(llmignorePath, content); err != nil {
+		return fmt.Errorf("creating default .llmignore file: %w", err)
+	}
+
+	return nil
+}
+
 // LoadIgnoreMatcher loads ignore rules from .gitignore and .llmignore.
 func LoadIgnoreMatcher(rootDir string, useGitignore bool, useLLMIgnore bool) (*gitignore.GitIgnore, error) {
 	var patterns []string
@@ -46,6 +116,17 @@ func LoadIgnoreMatcher(rootDir string, useGitignore bool, useLLMIgnore bool) (*g
 	}
 
 	if useLLMIgnore {
+		// Check if .llmignore exists, create it with defaults if not
+		if _, err := os.Stat(llmignorePath); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "No .llmignore found. Creating one with default patterns...\n")
+			if err := CreateDefaultLLMIgnoreFile(rootDir); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to create default .llmignore: %v\n", err)
+				// Continue without .llmignore
+			} else {
+				fmt.Fprintf(os.Stderr, "Created default .llmignore file at %s\n", llmignorePath)
+			}
+		}
+
 		llmLines, err := readFileLines(llmignorePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: %v\n", err) // Log error but continue
