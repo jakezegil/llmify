@@ -1,113 +1,106 @@
-# LLMify
+# 🚀 LLMify
 
-A CLI tool that generates a comprehensive text file containing your codebase context for Large Language Models (LLMs).
+> **A collection of tools that optimize your codebase for LLMs and agents**
 
-## Features
+[![npm version](https://img.shields.io/npm/v/llmify.svg?style=flat-square)](https://www.npmjs.com/package/llmify)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/jakezegil/llmify/blob/main/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/jakezegil/llmify/pulls)
 
-- Crawls project directories and creates a single output file with:
-  - A visual tree structure of your project
-  - The content of all included text files
-- Respects `.gitignore` and `.llmignore` patterns
-- Intelligently excludes binary files based on content analysis
-- Offers customizable filtering (include/exclude patterns, max depth, specific sub-path)
-- Formats output in a way that's optimized for LLM context
+LLMify is made for LLMs by LLMs - a suite of powerful tools that transform your codebase into the perfect context for AI agents. Get started with a single command: `npx llmify`
 
-## Installation
+## ✨ Features
 
-### Pre-built Binaries
+- 📊 **Visual Project Structure** - Creates a tree view of your codebase
+- 📄 **Smart Content Extraction** - Pulls content from all relevant files
+- 🧠 **Context Optimization** - Formats output specifically for LLMs
+- 🔍 **Intelligent Filtering** - Respects `.gitignore` and auto-creates `.llmignore`
+- 🛠️ **Highly Customizable** - Control depth, paths, and patterns
 
-Download the appropriate binary for your platform from the [Releases page](https://github.com/username/llmify/releases).
+## 🔥 Why LLMify?
 
-### Build from Source
+Getting the right context to an LLM is critical for quality results. LLMify solves this by:
+
+- **Saving Time** - No more manual file copying
+- **Improving Responses** - Gives LLMs better structural understanding of your codebase
+- **Reducing Token Usage** - Smart filtering excludes irrelevant files
+- **Working Everywhere** - Supports all major platforms
+
+## 📦 Installation
+
+### NPM (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/username/llmify.git
-cd llmify
-
-# Build the binary
-go build -o llmify .
-# Or on Windows: go build -o llmify.exe .
-
-# Optional: Move to a directory in your PATH
-# Linux/macOS
-sudo mv llmify /usr/local/bin/
-# Or for user-local installation: mv llmify ~/bin/
+npm install -g llmify
 ```
 
-## Usage
+### Homebrew
 
 ```bash
-# Basic usage - creates llm.txt in the current directory
+brew install jakezegil/tap/llmify
+```
+
+### Direct Download
+
+Grab the [latest release](https://github.com/jakezegil/llmify/releases) for your platform.
+
+## 🚀 Quick Start
+
+Generate context for your current directory:
+
+```bash
+# Creates llm.txt in current directory
 llmify
 
-# Specify a different root directory
-llmify /path/to/your/project
+# Paste into your favorite LLM
+cat llm.txt | pbcopy  # macOS
+cat llm.txt | xclip   # Linux
+type llm.txt | clip   # Windows
+```
 
-# Specify a different output file
-llmify -o context_for_gpt.txt
+## 👩‍💻 Usage Examples
 
-# Only include content from a specific subdirectory or file
+```bash
+# Specify a different project
+llmify /path/to/project
+
+# Only include a specific subdirectory
 llmify -p src/components
-llmify --path main.go
 
-# Exclude specific patterns
-llmify -e "*.log" -e "**/.cache/*"
-
-# Include specific files that would otherwise be excluded
-llmify -i "config/important.json"
+# Custom output file 
+llmify -o context_for_llm.txt
 
 # Limit directory depth for large projects
-llmify -d 3
+llmify -d 3 
 
-# Disable .gitignore processing
-llmify --no-gitignore
+# Exclude specific files
+llmify -e "*.test.js" -e "**/__mocks__/*"
 
-# See detailed output (helpful for debugging)
+# Include files that would otherwise be excluded
+llmify -i "important-config.json"
+
+# See what's happening (helpful for debugging)
 llmify -v
 ```
 
-## Using .llmignore
+## 🔧 `.llmignore` - Control What's Included
 
-Create a `.llmignore` file in your project's root directory to specify patterns that should be excluded from LLM context. This uses the same syntax as `.gitignore`. These rules apply *after* the `--path` filter, if used.
-
-Example `.llmignore`:
+LLMify automatically creates a `.llmignore` file with sensible defaults. Customize it to exclude any files irrelevant to your LLM conversations:
 
 ```
-# Exclude large data files
-data/*.csv
-*.json.gz
-
-# Exclude generated documentation
-docs/generated/
-
-# Exclude specific libraries
-lib/external/
+# Example .llmignore
+*.min.js
+*.csv
+node_modules/
+dist/
+coverage/
 ```
 
-## Full CLI Options
+## 🎯 Example Output
 
-```
-Usage:
-  llmify [directory] [flags]
+The generated file has a clean, LLM-friendly structure:
 
-Flags:
-  -e, --exclude strings      Glob patterns to exclude (can be used multiple times)
-      --exclude-binary       Attempt to exclude binary files based on content detection (default: true)
-      --header               Include a header with project info (default: true)
-  -i, --include strings      Glob patterns to include (overrides excludes, use carefully)
-  -d, --max-depth int        Maximum directory depth to crawl (0 for unlimited)
-      --no-gitignore         Do not use .gitignore rules
-      --no-llmignore         Do not use .llmignore rules
-  -o, --output string        Name of the output file (default "llm.txt")
-  -p, --path string          Only include files/directories within this specific relative path
-  -v, --verbose              Enable verbose logging
-  -h, --help                 Display help information
-```
-
-## Example Output
-
-The generated file will have this structure:
+<details>
+<summary>Click to see example output</summary>
 
 ```
 ============================================================
@@ -154,18 +147,32 @@ func main() {
     fmt.Println("Hello, world!")
 }
 ```
+```
+</details>
+
+## 💡 Pro Tips
+
+- Include a `.llmignore` in your project templates
+- Use with `--path` to focus on specific parts of your codebase
+- Combine with project-specific prompts for best results
+- For very large codebases, use `-d` to limit directory depth
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+- Report bugs
+- Suggest features
+- Submit pull requests
+
+## 📝 License
+
+[MIT](https://github.com/jakezegil/llmify/blob/main/LICENSE) © Jake Zegil
 
 ---
 
-### File: utils.go
-
-```go
-package main
-
-// ... file content here ...
-```
-```
-
-## License
-
-MIT License - See LICENSE file for details. 
+<p align="center">
+  Made with ❤️ for better LLM interactions
+  <br>
+  <a href="https://github.com/jakezegil/llmify">Star on GitHub</a> •
+  <a href="https://www.npmjs.com/package/llmify">View on npm</a>
+</p>
