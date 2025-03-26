@@ -1,0 +1,45 @@
+# Build artifacts
+# Note: All build and deployment scripts (*.sh, *.bat, etc.) are intentionally NOT ignored
+/bin/
+/dist/
+/llmify
+/llmify-*
+*.exe
+*.out
+
+# Go specific
+*.dll
+*.so
+*.dylib
+*.test
+go.work
+
+# npm directory
+npm/node_modules/
+npm/coverage/
+npm/dist/
+
+# Editor and OS files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs and debug
+*.log
+npm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+
+# Test files that shouldn't be included in version control
+/testdata/
+/tmp/
+*.tmp 

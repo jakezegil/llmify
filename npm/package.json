@@ -1,0 +1,37 @@
+{
+  "name": "llmify",
+  "version": "0.1.0",
+  "description": "A CLI tool that generates codebase context for LLMs",
+  "license": "MIT",
+  "author": "Jake <jakezegil@gmail.com>",
+  "homepage": "https://github.com/jakezegil/llmify",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jakezegil/llmify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jakezegil/llmify/issues"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "context",
+    "codebase",
+    "cli",
+    "go",
+    "development",
+    "tool"
+  ],
+  "main": "cli.js",
+  "bin": {
+    "llmify": "./cli.js"
+  },
+  "files": [
+    "bin/",
+    "cli.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=14"
+  }
+} 
