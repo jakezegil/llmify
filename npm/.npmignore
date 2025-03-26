@@ -1,0 +1,24 @@
+# Exclude build artifacts
+*.o
+*.a
+
+# Exclude any potential Go source files
+*.go
+go.mod
+go.sum
+
+# Exclude Node.js development dependencies
+node_modules/
+
+# Exclude Git stuff
+.git/
+.gitignore
+
+# Exclude macOS metadata
+.DS_Store
+
+# Exclude any test files
+test/
+tests/
+__tests__/
+*.test.js 
