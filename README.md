@@ -33,12 +33,6 @@ Getting the right context to an LLM is critical for quality results. LLMify solv
 npm install -g llmify
 ```
 
-### Homebrew
-
-```bash
-brew install jakezegil/tap/llmify
-```
-
 ### Direct Download
 
 Grab the [latest release](https://github.com/jakezegil/llmify/releases) for your platform.
