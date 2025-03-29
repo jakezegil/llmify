@@ -17,6 +17,7 @@ LLMify is made for LLMs by LLMs - a suite of powerful tools that transform your 
 - 🛠️ **Highly Customizable** - Control depth, paths, and patterns
 - 💬 **AI-Powered Commit Messages** - Generate detailed commit messages using LLMs
 - 📝 **Documentation Updates** - Automatically update docs based on code changes
+- 🔄 **Code Refactoring** - Refactor TypeScript code using LLMs based on custom prompts
 
 ## 🔥 Why LLMify?
 
@@ -28,6 +29,7 @@ Getting the right context to an LLM is critical for quality results. LLMify solv
 - **Working Everywhere** - Supports all major platforms
 - **Better Commits** - Generate clear, conventional commit messages
 - **Up-to-Date Docs** - Keep documentation in sync with code changes
+- **Efficient Refactoring** - Automate code refactoring with precision and control
 
 ## 📦 Installation
 
@@ -146,6 +148,28 @@ llmify docs --no-stage
 
 # Use a custom prompt for LLM
 llmify docs --prompt "Focus on API changes."
+```
+
+### Code Refactoring
+
+```bash
+# Refactor a specific file or directory
+llmify refactor src/app.ts
+
+# Provide a custom refactoring prompt
+llmify refactor src/app.ts --prompt "Simplify arrow functions"
+
+# Skip type checking
+llmify refactor src/app.ts --no-check-types
+
+# Display the proposed diff before applying changes
+llmify refactor src/app.ts --show-diff
+
+# Directly apply changes without confirmation
+llmify refactor src/app.ts --apply --force
+
+# Execute a dry run, showing proposed changes without applying them
+llmify refactor src/app.ts --dry-run
 ```
 
 ## ⚙️ Configuration
