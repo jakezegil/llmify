@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.10 (2025-03-29)
+
+
+
+
 ## v0.0.9 (2025-03-29)
 
 - feat: enhance project crawling and output generation
