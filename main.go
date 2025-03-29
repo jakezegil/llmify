@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Functions from crawler.go and utils.go are already defined in the main package
+
 var (
 	outputFile    string
 	excludes      []string
@@ -190,11 +192,14 @@ func init() {
 	rootCmd.Flags().BoolVar(&excludeBinary, "exclude-binary", true, "Attempt to exclude binary files for context dump")
 	rootCmd.Flags().BoolVar(&includeHeader, "header", true, "Include a header in the context dump output file")
 
-	// Add the new commit command
+	// Add the commit command
 	rootCmd.AddCommand(cmd.CommitCmd)
 
 	// Add the docs command
 	rootCmd.AddCommand(cmd.DocsCmd)
+
+	// Add the refactor command
+	rootCmd.AddCommand(cmd.RefactorCmd)
 
 	// Add other commands here later
 }
