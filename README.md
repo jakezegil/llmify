@@ -15,15 +15,19 @@ LLMify is made for LLMs by LLMs - a suite of powerful tools that transform your 
 - 🧠 **Context Optimization** - Formats output specifically for LLMs
 - 🔍 **Intelligent Filtering** - Respects `.gitignore` and auto-creates `.llmignore`
 - 🛠️ **Highly Customizable** - Control depth, paths, and patterns
+- 💬 **AI-Powered Commit Messages** - Generate detailed commit messages using LLMs
+- 📝 **Documentation Updates** - Automatically update docs based on code changes
 
 ## 🔥 Why LLMify?
 
 Getting the right context to an LLM is critical for quality results. LLMify solves this by:
 
-- **Saving Time** - No more manual file copying
+- **Saving Time** - No more manual file copying or writing commit messages
 - **Improving Responses** - Gives LLMs better structural understanding of your codebase
 - **Reducing Token Usage** - Smart filtering excludes irrelevant files
 - **Working Everywhere** - Supports all major platforms
+- **Better Commits** - Generate clear, conventional commit messages
+- **Up-to-Date Docs** - Keep documentation in sync with code changes
 
 ## 📦 Installation
 
@@ -51,7 +55,25 @@ cat llm.txt | xclip   # Linux
 type llm.txt | clip   # Windows
 ```
 
+Generate a commit message for staged changes:
+
+```bash
+# Stage your changes
+git add .
+
+# Generate and edit commit message
+llmify commit
+
+# Force commit without confirmation
+llmify commit -f
+
+# Update docs and commit
+llmify commit --docs
+```
+
 ## 👩‍💻 Usage Examples
+
+### Context Generation
 
 ```bash
 # Specify a different project
@@ -75,6 +97,58 @@ llmify -i "important-config.json"
 # See what's happening (helpful for debugging)
 llmify -v
 ```
+
+### Commit Message Generation
+
+```bash
+# Generate commit message with default settings
+llmify commit
+
+# Skip confirmation prompt
+llmify commit -f
+
+# Update docs and commit
+llmify commit --docs
+
+# Verbose output
+llmify commit -v
+
+# Set LLM timeout (in seconds)
+llmify commit --llm-timeout 60
+```
+
+## ⚙️ Configuration
+
+LLMify can be configured via a `.llmifyrc.yaml` file in your project root or `~/.config/llmify/config.yaml`:
+
+```yaml
+# LLM Configuration
+llm:
+  # The LLM provider to use (e.g., "openai", "anthropic", "ollama")
+  provider: "openai"
+  
+  # The default model to use for general tasks
+  model: "gpt-4"
+  
+  # Provider-specific settings
+  ollama_base_url: "http://localhost:11434"  # Only used for Ollama provider
+
+# Commit-specific settings
+commit:
+  # Optional: Override the default model for commit message generation
+  model: "gpt-4"
+
+# Documentation update settings
+docs:
+  # Optional: Override the default model for documentation updates
+  model: "gpt-4"
+```
+
+Environment variables can also be used:
+- `LLMIFY_LLM_PROVIDER` - Set the LLM provider
+- `LLMIFY_LLM_MODEL` - Set the default model
+- `OPENAI_API_KEY` - OpenAI API key
+- `ANTHROPIC_API_KEY` - Anthropic API key
 
 ## 🔧 `.llmignore` - Control What's Included
 
@@ -150,6 +224,8 @@ func main() {
 - Use with `--path` to focus on specific parts of your codebase
 - Combine with project-specific prompts for best results
 - For very large codebases, use `-d` to limit directory depth
+- Use `llmify commit --docs` to keep documentation in sync
+- Configure different models for different tasks in `.llmifyrc.yaml`
 
 ## 🤝 Contributing
 
