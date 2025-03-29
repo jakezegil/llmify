@@ -193,5 +193,8 @@ func init() {
 	// Add the new commit command
 	rootCmd.AddCommand(cmd.CommitCmd)
 
+	// Add the docs command
+	rootCmd.AddCommand(cmd.DocsCmd)
+
 	// Add other commands here later
 }

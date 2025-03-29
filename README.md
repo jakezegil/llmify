@@ -110,11 +110,42 @@ llmify commit -f
 # Update docs and commit
 llmify commit --docs
 
+# Disable editing commit message
+llmify commit --no-edit
+
 # Verbose output
 llmify commit -v
 
 # Set LLM timeout (in seconds)
 llmify commit --llm-timeout 60
+```
+
+### Documentation Update
+
+```bash
+# Analyze staged changes for documentation updates
+llmify docs
+
+# Analyze the last 5 commits
+llmify docs --commits 5
+
+# Interactively select specific commits to analyze
+llmify docs --interactive
+
+# Specify a path to focus on
+llmify docs --path src/
+
+# Dry run without applying changes
+llmify docs --dry-run
+
+# Apply changes without confirmation
+llmify docs --force
+
+# Do not stage updated documentation files
+llmify docs --no-stage
+
+# Use a custom prompt for LLM
+llmify docs --prompt "Focus on API changes."
 ```
 
 ## ⚙️ Configuration
