@@ -1,6 +1,6 @@
 {
   "name": "llmify",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A CLI tool that generates codebase context for LLMs and provides AI-powered development tools",
   "license": "MIT",
   "author": "Jake <jakezegil@gmail.com>",
