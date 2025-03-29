@@ -10,6 +10,7 @@ import (
 
 	"github.com/jake/llmify/internal/config"
 	"github.com/jake/llmify/internal/diff"
+	"github.com/jake/llmify/internal/editor"
 	"github.com/jake/llmify/internal/llm"
 	"github.com/spf13/viper"
 )
@@ -20,10 +21,13 @@ type RefactorResult struct {
 	ProposedContent   string // Empty if no change proposed or error
 	TypeCheckOK       bool
 	TypeCheckOutput   string
-	LLMError          error // Error during LLM generation
-	TypeCheckError    error // Error *running* type check
-	NeedsConfirmation bool  // Does this specific file need user confirmation?
-	Apply             bool  // Should changes be applied (set after confirmation)?
+	LLMError          error         // Error during LLM generation
+	TypeCheckError    error         // Error *running* type check
+	NeedsConfirmation bool          // Does this specific file need user confirmation?
+	Apply             bool          // Should changes be applied (set after confirmation)?
+	Edits             []editor.Edit // The parsed edits from the LLM
+	IsFullReplacement bool          // Whether the LLM provided a full file replacement
+	EditApplyError    error         // Error applying the edits
 }
 
 // ProcessFileRefactor handles the refactoring logic for a single file.
@@ -59,7 +63,7 @@ func ProcessFileRefactor(ctx context.Context, cfg *config.Config, llmClient llm.
 
 	// Create refactoring prompt directly
 	prompt := fmt.Sprintf(`
-You are an expert TypeScript developer specializing in safe and effective code refactoring.
+You are an expert developer specializing in safe and effective code refactoring.
 Your task is to refactor the provided code snippet based on the user's request, ensuring correctness and maintaining necessary imports.
 
 USER'S REFACTORING GOAL:
@@ -80,9 +84,41 @@ IMPORTANT INSTRUCTIONS:
 2. Do NOT include markdown code blocks or triple backticks.
 3. Do NOT include any explanations or comments about your changes.
 4. If refactoring the entire file, include necessary import statements.
-5. The output should be valid TypeScript code that can be directly saved to a file.
+5. The output should be valid code that can be directly saved to a file.
 6. Do NOT add any unnecessary imports or modules.
-7. Preserve existing imports and only add new ones if absolutely necessary.`, userPrompt, contextSnippet, targetCode)
+7. Preserve existing imports and only add new ones if absolutely necessary.
+8. Preserve original indentation and formatting.
+
+OUTPUT FORMAT:
+If the changes are targeted and specific, provide them in one of these formats:
+
+1. For replacing existing code:
+--- LLMIFY REPLACE START ---
+<<< ORIGINAL >>>
+[The exact lines to be replaced]
+<<< REPLACEMENT >>>
+[The new lines to replace the original block]
+--- LLMIFY REPLACE END ---
+
+2. For inserting new code:
+--- LLMIFY INSERT_AFTER START ---
+<<< CONTEXT_LINE >>>
+[The exact line content *immediately preceding* the desired insertion point]
+<<< INSERTION >>>
+[The new lines to be inserted]
+--- LLMIFY INSERT_AFTER END ---
+
+3. For deleting code:
+--- LLMIFY DELETE START ---
+<<< CONTENT >>>
+[The exact lines to be deleted]
+--- LLMIFY DELETE END ---
+
+If the changes are too extensive or complex for the edit format, provide the complete updated content enclosed in triple backticks:
+`+"```"+`language
+[Complete updated content]
+`+"```"+`
+`, userPrompt, contextSnippet, targetCode)
 
 	// Get timeout from command line flags with fallback to a much larger value
 	timeoutSeconds := viper.GetInt("llm.timeout_seconds")
@@ -118,9 +154,38 @@ IMPORTANT INSTRUCTIONS:
 		return result, nil               // Don't return error, just store it in result
 	}
 
-	// Clean up the response to remove markdown code blocks if present
-	cleanedCode := cleanLLMResponse(proposedCode)
-	result.ProposedContent = strings.TrimSpace(cleanedCode)
+	// Parse the LLM response for edits or full file content
+	edits, fullContent, err := editor.ParseLLMResponse(proposedCode)
+	if err != nil {
+		log.Printf("Error parsing LLM response for %s: %v", filePath, err)
+		result.NeedsConfirmation = false
+		return result, nil
+	}
+
+	// If we got a full file replacement
+	if fullContent != "" {
+		result.IsFullReplacement = true
+		result.ProposedContent = fullContent
+	} else if len(edits) > 0 {
+		// Apply the parsed edits
+		result.Edits = edits
+		newContent, err := editor.ApplyEdits(result.OriginalContent, edits)
+		if err != nil {
+			log.Printf("Error applying edits for %s: %v", filePath, err)
+			result.EditApplyError = err
+			result.NeedsConfirmation = false
+			return result, nil
+		}
+		result.ProposedContent = newContent
+	} else {
+		// No changes proposed
+		log.Printf("No changes proposed for %s.", filePath)
+		result.ProposedContent = result.OriginalContent
+		result.NeedsConfirmation = false
+		result.TypeCheckOK = true
+		result.TypeCheckOutput = "No changes proposed by LLM."
+		return result, nil
+	}
 
 	// Handle LLM potentially just saying "no changes needed" or similar
 	if len(result.ProposedContent) < 10 || strings.Contains(strings.ToLower(result.ProposedContent), "no changes needed") || result.ProposedContent == targetCode {
@@ -183,37 +248,4 @@ func extractImports(code string) string {
 		}
 	}
 	return strings.Join(imports, "\n")
-}
-
-// cleanLLMResponse removes markdown code fences and other formatting from LLM responses
-func cleanLLMResponse(response string) string {
-	// Trim leading/trailing whitespace
-	cleaned := strings.TrimSpace(response)
-
-	// Remove markdown code fences if present
-	codeBlockPatterns := []string{
-		"```typescript",
-		"```tsx",
-		"```js",
-		"```javascript",
-		"```ts",
-		"```",
-	}
-
-	// Remove opening code fence
-	for _, pattern := range codeBlockPatterns {
-		if strings.HasPrefix(cleaned, pattern) {
-			cleaned = strings.TrimPrefix(cleaned, pattern)
-			cleaned = strings.TrimSpace(cleaned)
-			break
-		}
-	}
-
-	// Remove closing code fence if present
-	if strings.HasSuffix(cleaned, "```") {
-		cleaned = strings.TrimSuffix(cleaned, "```")
-		cleaned = strings.TrimSpace(cleaned)
-	}
-
-	return cleaned
 }
