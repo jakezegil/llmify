@@ -1,0 +1,24 @@
+# LLM Configuration
+llm:
+  # The LLM provider to use (e.g., "openai", "anthropic", "ollama")
+  provider: "openai"
+  
+  # The default model to use for general tasks
+  model: "gpt-4o-mini"
+  
+  # Provider-specific settings
+  ollama_base_url: "http://localhost:11434"  # Only used for Ollama provider
+
+# Commit-specific settings
+commit:
+  # Optional: Override the default model for commit message generation
+  # If not set, uses the default model from llm.model
+  model: "gpt-4o-mini"
+
+# Documentation update settings
+docs:
+  # Optional: Override the default model for documentation updates
+  # If not set, uses the default model from llm.model
+  model: "gpt-4o"
+  # TODO: Add patterns for doc files to check
+  # patterns: ["*.md", "docs/**/*.md"] 

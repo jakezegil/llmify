@@ -1,6 +1,6 @@
 ============================================================
 Project Root: /Users/jake/llmify
-Generated At: 2025-03-26T11:38:23-04:00
+Generated At: 2025-03-28T22:23:21-04:00
 ============================================================
 
 ## File Tree Structure
@@ -9,7 +9,20 @@ Generated At: 2025-03-26T11:38:23-04:00
 llmify/
 ├── .git/
 ├── bin/
+├── cmd/
+│   └── commit.go
 ├── dist/
+├── internal/
+│   ├── config/
+│   │   └── config.go
+│   ├── git/
+│   │   └── git.go
+│   ├── llm/
+│   │   ├── client.go
+│   │   ├── openai.go
+│   │   └── prompts.go
+│   └── ui/
+│       └── editor.go
 ├── npm/
 │   ├── bin/
 │   ├── .npmignore
@@ -23,6 +36,7 @@ llmify/
 │   ├── quickstart.sh
 │   └── README.md
 ├── .gitignore
+├── .llmifyrc.yaml
 ├── .llmignore
 ├── build-binaries.sh
 ├── CHANGELOG.md
@@ -91,6 +105,37 @@ npm-debug.log*
 
 ---
 
+### File: .llmifyrc.yaml
+
+```yaml
+# LLM Configuration
+llm:
+  # The LLM provider to use (e.g., "openai", "anthropic", "ollama")
+  provider: "openai"
+  
+  # The default model to use for general tasks
+  model: "gpt-4o-mini"
+  
+  # Provider-specific settings
+  ollama_base_url: "http://localhost:11434"  # Only used for Ollama provider
+
+# Commit-specific settings
+commit:
+  # Optional: Override the default model for commit message generation
+  # If not set, uses the default model from llm.model
+  model: "gpt-4o-mini"
+
+# Documentation update settings
+docs:
+  # Optional: Override the default model for documentation updates
+  # If not set, uses the default model from llm.model
+  model: "gpt-4o"
+  # TODO: Add patterns for doc files to check
+  # patterns: ["*.md", "docs/**/*.md"] 
+```
+
+---
+
 ### File: .llmignore
 
 ```llmignore
@@ -155,6 +200,35 @@ Thumbs.db
 ```md
 # Changelog
 
+## v0.0.7 (2025-03-29)
+
+- Add `llmify commit` command for AI-powered commit message generation
+- Add support for automatic documentation updates with `--docs` flag
+- Add configuration system with `.llmifyrc.yaml` and environment variables
+- Add support for multiple LLM providers (OpenAI, Anthropic, Ollama)
+- Add global flags for verbose output and LLM timeout
+- Improve error handling and user feedback
+
+## v0.0.6 (2025-03-26)
+
+- update binaries
+
+
+## v0.0.5 (2025-03-26)
+
+- npm readme
+
+
+## v0.0.4 (2025-03-26)
+
+- update readme
+
+
+## v0.0.3 (2025-03-26)
+
+- add intelligent defaults
+
+
 ## v0.0.2 (2025-03-26)
 
 - add dummy build script
@@ -197,116 +271,177 @@ SOFTWARE.
 ### File: README.md
 
 ```md
-# LLMify
+# 🚀 LLMify
 
-A CLI tool that generates a comprehensive text file containing your codebase context for Large Language Models (LLMs).
+> **A collection of tools that optimize your codebase for LLMs and agents**
 
-## Features
+[![npm version](https://img.shields.io/npm/v/llmify.svg?style=flat-square)](https://www.npmjs.com/package/llmify)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/jakezegil/llmify/blob/main/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/jakezegil/llmify/pulls)
 
-- Crawls project directories and creates a single output file with:
-  - A visual tree structure of your project
-  - The content of all included text files
-- Respects `.gitignore` and `.llmignore` patterns
-- Intelligently excludes binary files based on content analysis
-- Offers customizable filtering (include/exclude patterns, max depth, specific sub-path)
-- Formats output in a way that's optimized for LLM context
+LLMify is made for LLMs by LLMs - a suite of powerful tools that transform your codebase into the perfect context for AI agents. Get started with a single command: `npx llmify`
 
-## Installation
+## ✨ Features
 
-### Pre-built Binaries
+- 📊 **Visual Project Structure** - Creates a tree view of your codebase
+- 📄 **Smart Content Extraction** - Pulls content from all relevant files
+- 🧠 **Context Optimization** - Formats output specifically for LLMs
+- 🔍 **Intelligent Filtering** - Respects `.gitignore` and auto-creates `.llmignore`
+- 🛠️ **Highly Customizable** - Control depth, paths, and patterns
+- 💬 **AI-Powered Commit Messages** - Generate detailed commit messages using LLMs
+- 📝 **Documentation Updates** - Automatically update docs based on code changes
 
-Download the appropriate binary for your platform from the [Releases page](https://github.com/username/llmify/releases).
+## 🔥 Why LLMify?
 
-### Build from Source
+Getting the right context to an LLM is critical for quality results. LLMify solves this by:
+
+- **Saving Time** - No more manual file copying or writing commit messages
+- **Improving Responses** - Gives LLMs better structural understanding of your codebase
+- **Reducing Token Usage** - Smart filtering excludes irrelevant files
+- **Working Everywhere** - Supports all major platforms
+- **Better Commits** - Generate clear, conventional commit messages
+- **Up-to-Date Docs** - Keep documentation in sync with code changes
+
+## 📦 Installation
+
+### NPM (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/username/llmify.git
-cd llmify
-
-# Build the binary
-go build -o llmify .
-# Or on Windows: go build -o llmify.exe .
-
-# Optional: Move to a directory in your PATH
-# Linux/macOS
-sudo mv llmify /usr/local/bin/
-# Or for user-local installation: mv llmify ~/bin/
+npm install -g llmify
 ```
 
-## Usage
+### Direct Download
+
+Grab the [latest release](https://github.com/jakezegil/llmify/releases) for your platform.
+
+## 🚀 Quick Start
+
+Generate context for your current directory:
 
 ```bash
-# Basic usage - creates llm.txt in the current directory
+# Creates llm.txt in current directory
 llmify
 
-# Specify a different root directory
-llmify /path/to/your/project
+# Paste into your favorite LLM
+cat llm.txt | pbcopy  # macOS
+cat llm.txt | xclip   # Linux
+type llm.txt | clip   # Windows
+```
 
-# Specify a different output file
-llmify -o context_for_gpt.txt
+Generate a commit message for staged changes:
 
-# Only include content from a specific subdirectory or file
+```bash
+# Stage your changes
+git add .
+
+# Generate and edit commit message
+llmify commit
+
+# Force commit without confirmation
+llmify commit -f
+
+# Update docs and commit
+llmify commit --docs
+```
+
+## 👩‍💻 Usage Examples
+
+### Context Generation
+
+```bash
+# Specify a different project
+llmify /path/to/project
+
+# Only include a specific subdirectory
 llmify -p src/components
-llmify --path main.go
 
-# Exclude specific patterns
-llmify -e "*.log" -e "**/.cache/*"
-
-# Include specific files that would otherwise be excluded
-llmify -i "config/important.json"
+# Custom output file 
+llmify -o context_for_llm.txt
 
 # Limit directory depth for large projects
-llmify -d 3
+llmify -d 3 
 
-# Disable .gitignore processing
-llmify --no-gitignore
+# Exclude specific files
+llmify -e "*.test.js" -e "**/__mocks__/*"
 
-# See detailed output (helpful for debugging)
+# Include files that would otherwise be excluded
+llmify -i "important-config.json"
+
+# See what's happening (helpful for debugging)
 llmify -v
 ```
 
-## Using .llmignore
+### Commit Message Generation
 
-Create a `.llmignore` file in your project's root directory to specify patterns that should be excluded from LLM context. This uses the same syntax as `.gitignore`. These rules apply *after* the `--path` filter, if used.
+```bash
+# Generate commit message with default settings
+llmify commit
 
-Example `.llmignore`:
+# Skip confirmation prompt
+llmify commit -f
 
-```
-# Exclude large data files
-data/*.csv
-*.json.gz
+# Update docs and commit
+llmify commit --docs
 
-# Exclude generated documentation
-docs/generated/
+# Verbose output
+llmify commit -v
 
-# Exclude specific libraries
-lib/external/
-```
-
-## Full CLI Options
-
-```
-Usage:
-  llmify [directory] [flags]
-
-Flags:
-  -e, --exclude strings      Glob patterns to exclude (can be used multiple times)
-      --exclude-binary       Attempt to exclude binary files based on content detection (default: true)
-      --header               Include a header with project info (default: true)
-  -i, --include strings      Glob patterns to include (overrides excludes, use carefully)
-  -d, --max-depth int        Maximum directory depth to crawl (0 for unlimited)
-      --no-gitignore         Do not use .gitignore rules
-      --no-llmignore         Do not use .llmignore rules
-  -o, --output string        Name of the output file (default "llm.txt")
-  -p, --path string          Only include files/directories within this specific relative path
-  -v, --verbose              Enable verbose logging
-  -h, --help                 Display help information
+# Set LLM timeout (in seconds)
+llmify commit --llm-timeout 60
 ```
 
-## Example Output
+## ⚙️ Configuration
 
-The generated file will have this structure:
+LLMify can be configured via a `.llmifyrc.yaml` file in your project root or `~/.config/llmify/config.yaml`:
+
+```yaml
+# LLM Configuration
+llm:
+  # The LLM provider to use (e.g., "openai", "anthropic", "ollama")
+  provider: "openai"
+  
+  # The default model to use for general tasks
+  model: "gpt-4"
+  
+  # Provider-specific settings
+  ollama_base_url: "http://localhost:11434"  # Only used for Ollama provider
+
+# Commit-specific settings
+commit:
+  # Optional: Override the default model for commit message generation
+  model: "gpt-4"
+
+# Documentation update settings
+docs:
+  # Optional: Override the default model for documentation updates
+  model: "gpt-4"
+```
+
+Environment variables can also be used:
+- `LLMIFY_LLM_PROVIDER` - Set the LLM provider
+- `LLMIFY_LLM_MODEL` - Set the default model
+- `OPENAI_API_KEY` - OpenAI API key
+- `ANTHROPIC_API_KEY` - Anthropic API key
+
+## 🔧 `.llmignore` - Control What's Included
+
+LLMify automatically creates a `.llmignore` file with sensible defaults. Customize it to exclude any files irrelevant to your LLM conversations:
+
+```
+# Example .llmignore
+*.min.js
+*.csv
+node_modules/
+dist/
+coverage/
+```
+
+## 🎯 Example Output
+
+The generated file has a clean, LLM-friendly structure:
+
+<details>
+<summary>Click to see example output</summary>
 
 ```
 ============================================================
@@ -353,21 +488,38 @@ func main() {
     fmt.Println("Hello, world!")
 }
 ```
+```
+</details>
+
+## 💡 Pro Tips
+
+- Include a `.llmignore` in your project templates
+- Use with `--path` to focus on specific parts of your codebase
+- Combine with project-specific prompts for best results
+- For very large codebases, use `-d` to limit directory depth
+- Use `llmify commit --docs` to keep documentation in sync
+- Configure different models for different tasks in `.llmifyrc.yaml`
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+- Report bugs
+- Suggest features
+- Submit pull requests
+
+## 📝 License
+
+[MIT](https://github.com/jakezegil/llmify/blob/main/LICENSE) © Jake Zegil
 
 ---
 
-### File: utils.go
+<p align="center">
+  Made with ❤️ for better LLM interactions
+  <br>
+  <a href="https://github.com/jakezegil/llmify">Star on GitHub</a> •
+  <a href="https://www.npmjs.com/package/llmify">View on npm</a>
+</p>
 
-```go
-package main
-
-// ... file content here ...
-```
-```
-
-## License
-
-MIT License - See LICENSE file for details. 
 ```
 
 ---
@@ -430,6 +582,294 @@ for TARGET in "${TARGETS[@]}"; do
 done
 
 echo "Build complete. Binaries are in $OUTPUT_DIR" 
+```
+
+---
+
+### File: cmd/commit.go
+
+```go
+package cmd
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/jake/llmify/internal/config"
+	"github.com/jake/llmify/internal/git"
+	"github.com/jake/llmify/internal/llm"
+	"github.com/jake/llmify/internal/ui"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+var (
+	commitUpdateDocs bool
+	commitForce      bool
+)
+
+var CommitCmd = &cobra.Command{
+	Use:   "commit",
+	Short: "Generate a commit message for staged changes using an LLM.",
+	Long: `Analyzes staged code changes (git diff --staged), generates a detailed
+commit message suggestion using the configured LLM, allows editing,
+and optionally updates documentation files before committing.`,
+	RunE: runCommit,
+}
+
+func init() {
+	CommitCmd.Flags().BoolVar(&commitUpdateDocs, "docs", false, "Attempt to automatically update relevant documentation files (*.md) based on changes.")
+	CommitCmd.Flags().BoolVarP(&commitForce, "force", "f", false, "Skip the final confirmation prompt before committing.")
+	// Add other flags if necessary
+}
+
+func runCommit(cmd *cobra.Command, args []string) error {
+	verbose := viper.GetBool("verbose") // Get verbose flag state if set globally
+	if verbose {
+		log.Println("Running commit command...")
+	}
+
+	// --- 0. Load Config ---
+	// Config is loaded via root command's PersistentPreRun or called explicitly here
+	// Assuming GlobalConfig is populated from config.LoadConfig() called elsewhere
+	if err := config.LoadConfig(); err != nil { // Call here if not done globally
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+	cfg := &config.GlobalConfig // Use the globally loaded config
+
+	// --- 1. Get Staged Changes ---
+	if verbose {
+		log.Println("Getting staged diff...")
+	}
+	diff, err := git.GetStagedDiff()
+	if err != nil {
+		if strings.Contains(err.Error(), "no changes staged") {
+			fmt.Println("No changes staged for commit.")
+			return nil // Not an error for the command
+		}
+		return fmt.Errorf("failed to get staged changes: %w", err)
+	}
+
+	if verbose {
+		log.Println("Getting staged files...")
+	}
+	stagedFiles, err := git.GetStagedFiles()
+	if err != nil {
+		return fmt.Errorf("failed to get staged file list: %w", err)
+	}
+	if len(stagedFiles) == 0 {
+		fmt.Println("No files staged for commit (diff reported changes, but file list is empty - check git status).")
+		return nil
+	}
+
+	// --- 2. Gather Context ---
+	if verbose {
+		log.Println("Gathering context from staged files...")
+	}
+	var contextBuilder strings.Builder
+	repoRoot, err := git.GetRepoRoot() // Get root to construct full paths
+	if err != nil {
+		log.Printf("Warning: could not get repo root, using relative paths: %v", err)
+		repoRoot = "." // Fallback
+	}
+
+	// TODO: Add token limiting logic here if context gets too large
+	const maxContextChars = 100000 // Example limit, adjust as needed
+	currentChars := 0
+
+	for _, fileRelPath := range stagedFiles {
+		fullPath := filepath.Join(repoRoot, fileRelPath)
+		// Check if file exists before reading (it might be a deleted file in the diff)
+		if _, statErr := os.Stat(fullPath); os.IsNotExist(statErr) {
+			contextBuilder.WriteString(fmt.Sprintf("\n--- File (Deleted): %s ---\n", fileRelPath))
+			continue
+		}
+
+		content, readErr := os.ReadFile(fullPath)
+		if readErr != nil {
+			log.Printf("Warning: could not read file %s: %v", fileRelPath, readErr)
+			content = []byte(fmt.Sprintf("Error reading file: %v", readErr))
+		}
+
+		fileHeader := fmt.Sprintf("\n--- File: %s ---\n", fileRelPath)
+		if currentChars+len(fileHeader)+len(content) > maxContextChars {
+			remainingSpace := maxContextChars - currentChars - len(fileHeader) - 20 // reserve space for truncation message
+			if remainingSpace > 0 {
+				contextBuilder.WriteString(fileHeader)
+				contextBuilder.Write(content[:remainingSpace])
+				contextBuilder.WriteString("\n... (file truncated)\n")
+			}
+			log.Printf("Warning: Context truncated due to size limits. Files included: %d of %d", len(contextBuilder.String()), len(stagedFiles)) // Crude count
+			break                                                                                                                                 // Stop adding more files
+		}
+
+		contextBuilder.WriteString(fileHeader)
+		contextBuilder.Write(content)
+		currentChars += len(fileHeader) + len(content)
+	}
+	fullContext := contextBuilder.String()
+
+	// --- 3. Create LLM Client ---
+	if verbose {
+		log.Printf("Initializing LLM client (Provider: %s)", cfg.LLM.Provider)
+	}
+	llmClient, err := llm.NewLLMClient(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create LLM client: %w", err)
+	}
+
+	// --- 4. Generate Commit Message ---
+	commitModel := cfg.Commit.Model // Use specific commit model
+	if verbose {
+		log.Printf("Generating commit message using model: %s...", commitModel)
+	}
+	commitPrompt := llm.CreateCommitPrompt(diff, fullContext)
+	// Use context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(viper.GetInt("llm.timeout_seconds"))*time.Second) // Add timeout config
+	defer cancel()
+
+	proposedMessage, err := llmClient.Generate(ctx, commitPrompt, commitModel)
+	if err != nil {
+		return fmt.Errorf("failed to generate commit message: %w", err)
+	}
+	proposedMessage = strings.TrimSpace(proposedMessage) // Clean up LLM output
+
+	// --- 5. Handle --docs flag ---
+	updatedDocs := []string{}
+	if commitUpdateDocs {
+		if verbose {
+			log.Println("Processing --docs flag...")
+		}
+		docsModel := cfg.Docs.Model // Use specific docs model
+
+		// Find candidate *.md files (simple approach: walk current dir)
+		// TODO: Make this smarter (use repo root, respect ignores)
+		var candidateDocs []string
+		err = filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			// Basic filter: .md extension, not in .git, maybe respect .llmignore later
+			if !d.IsDir() && strings.HasSuffix(strings.ToLower(d.Name()), ".md") && !strings.Contains(path, ".git"+string(filepath.Separator)) {
+				// Convert to relative path if needed, or use as is if WalkDir started from '.'
+				candidateDocs = append(candidateDocs, path)
+			}
+			return nil
+		})
+		if err != nil {
+			log.Printf("Warning: Error scanning for documentation files: %v", err)
+		}
+
+		if verbose {
+			log.Printf("Found %d potential markdown files to check.", len(candidateDocs))
+		}
+
+		for _, docPath := range candidateDocs {
+			if verbose {
+				log.Printf("Checking doc: %s", docPath)
+			}
+			docContent, readErr := os.ReadFile(docPath)
+			if readErr != nil {
+				log.Printf("Warning: could not read doc file %s: %v", docPath, readErr)
+				continue
+			}
+
+			docPrompt := llm.CreateDocsUpdatePrompt(diff, string(docContent))
+			ctxDocs, cancelDocs := context.WithTimeout(context.Background(), time.Duration(viper.GetInt("llm.timeout_seconds"))*time.Second) // Separate timeout
+
+			docResponse, llmErr := llmClient.Generate(ctxDocs, docPrompt, docsModel)
+			cancelDocs() // Release context resources
+			if llmErr != nil {
+				log.Printf("Warning: LLM failed to process doc %s: %v", docPath, llmErr)
+				continue
+			}
+
+			needsUpdate, newContent := llm.NeedsDocUpdate(docResponse)
+			if needsUpdate {
+				if verbose {
+					log.Printf("LLM proposed update for: %s", docPath)
+				}
+				// Write the new content back to the file
+				writeErr := os.WriteFile(docPath, []byte(newContent), 0644)
+				if writeErr != nil {
+					log.Printf("Warning: Failed to write updated doc %s: %v", docPath, writeErr)
+				} else {
+					updatedDocs = append(updatedDocs, docPath) // Add to list for staging
+				}
+			} else {
+				if verbose {
+					log.Printf("No update needed for: %s", docPath)
+				}
+			}
+		}
+
+		// Stage updated docs
+		if len(updatedDocs) > 0 {
+			if verbose {
+				log.Printf("Staging updated documentation files: %v", updatedDocs)
+			}
+			err = git.AddFiles(updatedDocs)
+			if err != nil {
+				// Log warning but maybe proceed with commit? Or make it fatal?
+				log.Printf("Warning: Failed to stage updated docs: %v", err)
+			} else {
+				fmt.Printf("Updated and staged documentation files: %s\n", strings.Join(updatedDocs, ", "))
+			}
+		}
+	}
+
+	// --- 6. Edit, Confirm, Commit Loop ---
+	finalMessage := proposedMessage
+	for {
+		fmt.Println("\n--- Proposed Commit Message ---")
+		fmt.Println(finalMessage)
+		fmt.Println("-----------------------------")
+
+		// Allow editing
+		editedMessage, editErr := ui.EditCommitMessage(finalMessage)
+		if editErr != nil {
+			return fmt.Errorf("failed during commit message editing: %w", editErr)
+		}
+		finalMessage = strings.TrimSpace(editedMessage)
+		if finalMessage == "" {
+			fmt.Println("Commit aborted: Empty commit message.")
+			return nil
+		}
+
+		// Confirm
+		proceed, editAgain, confirmErr := ui.ConfirmCommit(commitForce)
+		if confirmErr != nil {
+			return confirmErr // Error reading confirmation
+		}
+
+		if proceed {
+			break // Exit loop to commit
+		}
+		if !editAgain {
+			fmt.Println("Commit aborted.")
+			return nil // User chose 'no'
+		}
+		// Otherwise, loop back to edit again
+	}
+
+	// --- 7. Execute Commit ---
+	if verbose {
+		log.Println("Executing git commit...")
+	}
+	err = git.Commit(finalMessage)
+	if err != nil {
+		return fmt.Errorf("git commit execution failed: %w", err)
+	}
+
+	fmt.Println("Commit successful.")
+	return nil
+}
+
 ```
 
 ---
@@ -894,11 +1334,551 @@ module github.com/jake/llmify
 go 1.21.6
 
 require (
+	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
+	github.com/sagikazarmark/locafero v0.7.0 // indirect
+	github.com/sashabaranov/go-openai v1.38.1 // indirect
+	github.com/sourcegraph/conc v0.3.0 // indirect
+	github.com/spf13/afero v1.12.0 // indirect
+	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/viper v1.20.1 // indirect
+	github.com/subosito/gotenv v1.6.0 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+```
+
+---
+
+### File: internal/config/config.go
+
+```go
+package config
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/spf13/viper"
+)
+
+type LLMConfig struct {
+	Provider string `mapstructure:"provider"`
+	Model    string `mapstructure:"model"`
+	// Add provider-specific fields if needed, e.g.:
+	OllamaBaseURL string `mapstructure:"ollama_base_url"`
+	// API keys are typically handled via environment variables
+}
+
+type CommitConfig struct {
+	Model string `mapstructure:"model"` // Optional override
+}
+
+type DocsConfig struct {
+	Model string `mapstructure:"model"` // Optional override
+	// Could add patterns for doc files here:
+	// Patterns []string `mapstructure:"patterns"`
+}
+
+type Config struct {
+	LLM    LLMConfig    `mapstructure:"llm"`
+	Commit CommitConfig `mapstructure:"commit"`
+	Docs   DocsConfig   `mapstructure:"docs"`
+}
+
+var GlobalConfig Config
+
+func LoadConfig() error {
+	v := viper.New()
+
+	// 1. Set Defaults
+	v.SetDefault("llm.provider", "openai")
+	v.SetDefault("llm.model", "gpt-4") // Adjust default model as needed
+	v.SetDefault("llm.ollama_base_url", "http://localhost:11434")
+	// Defaults for Commit and Docs models will inherit from llm.model if not set
+
+	// 2. Set config file paths
+	home, _ := os.UserHomeDir()
+	configName := "config"
+	configType := "yaml"
+	configPaths := []string{
+		".", // Project root .llmifyrc.yaml (or .llmifyrc)
+	}
+	if home != "" {
+		configPaths = append(configPaths, filepath.Join(home, ".config", "llmify")) // ~/.config/llmify/config.yaml
+	}
+
+	v.SetConfigName(configName) // Name of config file (without extension)
+	v.SetConfigType(configType)
+	for _, p := range configPaths {
+		v.AddConfigPath(p)
+	}
+	v.SetConfigName(".llmifyrc") // Also support .llmifyrc.yaml in project root
+	v.AddConfigPath(".")
+
+	// 3. Read config file (optional)
+	err := v.ReadInConfig()
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			// Config file was found but another error was produced
+			return fmt.Errorf("error reading config file: %w", err)
+		}
+		// Config file not found; ignore error if it's just not found
+		fmt.Fprintln(os.Stderr, "Info: No config file found, using defaults and environment variables.")
+	}
+
+	// 4. Set environment variable binding
+	v.SetEnvPrefix("LLMIFY") // e.g., LLMIFY_LLM_PROVIDER
+	v.AutomaticEnv()
+	// Allow specific API keys to be picked up directly
+	v.BindEnv("llm.api_key.openai", "OPENAI_API_KEY")
+	v.BindEnv("llm.api_key.anthropic", "ANTHROPIC_API_KEY")
+	// Add others as needed
+
+	// 5. Unmarshal into GlobalConfig
+	err = v.Unmarshal(&GlobalConfig)
+	if err != nil {
+		return fmt.Errorf("unable to decode config: %w", err)
+	}
+
+	// Apply overrides if specific models aren't set
+	if GlobalConfig.Commit.Model == "" {
+		GlobalConfig.Commit.Model = GlobalConfig.LLM.Model
+	}
+	if GlobalConfig.Docs.Model == "" {
+		GlobalConfig.Docs.Model = GlobalConfig.LLM.Model
+	}
+
+	// For API Keys, prefer specific env vars if not set via LLMIFY_LLM_API_KEY_PROVIDER
+	// This logic might be better placed within the client factory, but shown here for clarity
+	if viper.GetString("llm.api_key.openai") != "" {
+		// Store it somewhere accessible if needed, but often the SDK reads it directly
+	}
+
+	if viper.GetBool("verbose") { // Assuming verbose flag sets this globally via viper
+		fmt.Fprintf(os.Stderr, "Loaded Config: %+v\n", GlobalConfig)
+	}
+
+	return nil
+}
+
+// Helper to get API key for the current provider
+func GetAPIKey(provider string) string {
+	// Viper reads bound env vars automatically
+	key := viper.GetString(fmt.Sprintf("llm.api_key.%s", strings.ToLower(provider)))
+	if key == "" {
+		// Fallback to standard env vars if Viper binding didn't pick it up
+		switch strings.ToLower(provider) {
+		case "openai":
+			key = os.Getenv("OPENAI_API_KEY")
+		case "anthropic":
+			key = os.Getenv("ANTHROPIC_API_KEY")
+			// Add other cases
+		}
+	}
+	return key
+}
+
+```
+
+---
+
+### File: internal/git/git.go
+
+```go
+package git
+
+import (
+	"bytes"
+	"fmt"
+	"os/exec"
+	"strings"
+)
+
+// runGitCommand executes a git command and returns its stdout output.
+func runGitCommand(args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	// Ensure git commands run relative to the repo root if possible
+	// This might need refinement depending on where llmify is executed from.
+	// For now, assume execution within the repo.
+
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("git command failed: 'git %s': %v\nStderr: %s", strings.Join(args, " "), err, stderr.String())
+	}
+	return strings.TrimSpace(stdout.String()), nil
+}
+
+// GetStagedDiff returns the output of `git diff --staged`.
+func GetStagedDiff() (string, error) {
+	diff, err := runGitCommand("diff", "--staged")
+	if err != nil {
+		// Distinguish between error and no diff?
+		// For now, treat any error as potentially problematic
+		return "", fmt.Errorf("failed to get staged diff: %w", err)
+	}
+	if diff == "" {
+		return "", fmt.Errorf("no changes staged for commit") // Specific error for no changes
+	}
+	return diff, nil
+}
+
+// GetStagedFiles returns a list of relative paths of staged files.
+func GetStagedFiles() ([]string, error) {
+	output, err := runGitCommand("diff", "--staged", "--name-only", "--relative")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get staged files: %w", err)
+	}
+	if output == "" {
+		return []string{}, nil // No files staged
+	}
+	files := strings.Split(output, "\n")
+	// Filter out empty strings if any
+	result := []string{}
+	for _, f := range files {
+		if f != "" {
+			result = append(result, f)
+		}
+	}
+	return result, nil
+}
+
+// Commit performs git commit with the given message.
+func Commit(message string) error {
+	_, err := runGitCommand("commit", "-m", message)
+	if err != nil {
+		return fmt.Errorf("git commit failed: %w", err)
+	}
+	return nil
+}
+
+// AddFiles stages the specified files.
+func AddFiles(files []string) error {
+	if len(files) == 0 {
+		return nil
+	}
+	args := append([]string{"add", "--"}, files...)
+	_, err := runGitCommand(args...)
+	if err != nil {
+		return fmt.Errorf("git add failed for files %v: %w", files, err)
+	}
+	return nil
+}
+
+// GetRepoRoot finds the root directory of the git repository.
+func GetRepoRoot() (string, error) {
+	root, err := runGitCommand("rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", fmt.Errorf("failed to find git repository root: %w", err)
+	}
+	return root, nil
+}
+
+```
+
+---
+
+### File: internal/llm/client.go
+
+```go
+package llm
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jake/llmify/internal/config" // Use the correct module path
+)
+
+// LLMClient defines the interface for interacting with different LLM providers.
+type LLMClient interface {
+	Generate(ctx context.Context, prompt string, model string) (string, error)
+}
+
+// NewLLMClient creates a new LLM client based on the configuration.
+func NewLLMClient(cfg *config.Config) (LLMClient, error) {
+	apiKey := config.GetAPIKey(cfg.LLM.Provider)
+
+	switch cfg.LLM.Provider {
+	case "openai":
+		if apiKey == "" {
+			return nil, fmt.Errorf("OpenAI API key not found (set OPENAI_API_KEY or LLMIFY_LLM_API_KEY_OPENAI)")
+		}
+		return NewOpenAIClient(apiKey), nil
+	// case "anthropic":
+	//     // ... implementation ...
+	// case "ollama":
+	// 	   return NewOllamaClient(cfg.LLM.OllamaBaseURL)
+	default:
+		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.LLM.Provider)
+	}
+}
+
+```
+
+---
+
+### File: internal/llm/openai.go
+
+```go
+package llm
+
+import (
+	"context"
+	"fmt"
+
+	openai "github.com/sashabaranov/go-openai"
+)
+
+type OpenAIClient struct {
+	client *openai.Client
+}
+
+func NewOpenAIClient(apiKey string) *OpenAIClient {
+	return &OpenAIClient{
+		client: openai.NewClient(apiKey),
+	}
+}
+
+func (c *OpenAIClient) Generate(ctx context.Context, prompt string, model string) (string, error) {
+	resp, err := c.client.CreateChatCompletion(
+		ctx,
+		openai.ChatCompletionRequest{
+			Model: model,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: "You are a helpful assistant.", // Or more specific system prompt
+				},
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+			// Add Temperature, MaxTokens etc. from config if desired
+		},
+	)
+
+	if err != nil {
+		return "", fmt.Errorf("openai chat completion error: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("openai returned no choices")
+	}
+
+	return resp.Choices[0].Message.Content, nil
+}
+
+```
+
+---
+
+### File: internal/llm/prompts.go
+
+```go
+package llm
+
+import (
+	"fmt"
+	"strings"
+)
+
+const commitPromptTemplate = `
+You are an expert programmer and Git user, tasked with writing a detailed and clear commit message.
+Analyze the following code changes (provided as a git diff) and the context of the changed files.
+
+Follow the Conventional Commits specification (https://www.conventionalcommits.org/).
+The commit message should have:
+1. A type prefix (e.g., feat, fix, refactor, chore, docs, style, test, perf).
+2. A concise subject line summarizing the change (imperative mood, lowercase).
+3. A blank line.
+4. A detailed body explaining the 'what' and 'why' of the changes. Be specific. Mention key functions/files modified and the reasoning. If it fixes an issue, reference it.
+5. Optionally, a footer for BREAKING CHANGES or issue references (e.g., Fixes #123).
+
+Here is the git diff:
+--- DIFF START ---
+%s
+--- DIFF END ---
+
+Here is the context of the changed files (content might be truncated):
+--- CONTEXT START ---
+%s
+--- CONTEXT END ---
+
+Generate the commit message now:
+`
+
+const docsUpdatePromptTemplate = `
+You are an expert technical writer tasked with updating documentation based on code changes.
+Analyze the following code changes (provided as a git diff) and the existing documentation section.
+
+Update the documentation provided below ONLY IF NECESSARY to accurately reflect the code changes.
+Focus on:
+- Changes to function signatures, parameters, or return types.
+- Added or removed features relevant to the documentation.
+- Changes in usage examples.
+- Clarifications needed based on the code modifications.
+
+If the documentation section does not need any updates based on the provided diff, respond with the exact phrase: "NO_UPDATE_NEEDED" and nothing else.
+
+Otherwise, provide the COMPLETE, updated documentation section. Do NOT just describe the changes; output the full modified text.
+
+Here is the git diff of the code changes:
+--- DIFF START ---
+%s
+--- DIFF END ---
+
+Here is the CURRENT documentation section to update:
+--- DOCS START ---
+%s
+--- DOCS END ---
+
+Provide the updated documentation section or "NO_UPDATE_NEEDED":
+`
+
+func CreateCommitPrompt(diff string, context string) string {
+	return fmt.Sprintf(commitPromptTemplate, diff, context)
+}
+
+func CreateDocsUpdatePrompt(diff string, docContent string) string {
+	return fmt.Sprintf(docsUpdatePromptTemplate, diff, docContent)
+}
+
+// Helper function to check LLM response for docs update
+func NeedsDocUpdate(response string) (bool, string) {
+	trimmedResponse := strings.TrimSpace(response)
+	if trimmedResponse == "NO_UPDATE_NEEDED" {
+		return false, ""
+	}
+	// Assume any other non-empty response is the updated content
+	return len(trimmedResponse) > 0, trimmedResponse
+}
+
+```
+
+---
+
+### File: internal/ui/editor.go
+
+```go
+package ui
+
+import (
+	"bufio"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"strings"
+)
+
+// DefaultEditorOrder defines the fallback order for text editors.
+var DefaultEditorOrder = []string{"vim", "nano", "vi", "emacs", "code", "notepad"} // Add more as needed
+
+// findEditor determines the editor to use based on environment or defaults.
+func findEditor() (string, error) {
+	editor := os.Getenv("EDITOR")
+	if editor != "" {
+		// Ensure the editor command exists
+		path, err := exec.LookPath(editor)
+		if err == nil {
+			return path, nil
+		}
+	}
+	// Try default editors
+	for _, ed := range DefaultEditorOrder {
+		path, err := exec.LookPath(ed)
+		if err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("no suitable text editor found in PATH or $EDITOR")
+}
+
+// EditCommitMessage launches an editor to allow modification of the message.
+func EditCommitMessage(initialMessage string) (string, error) {
+	editorPath, err := findEditor()
+	if err != nil {
+		return "", fmt.Errorf("cannot find editor: %w", err)
+	}
+
+	tmpfile, err := ioutil.TempFile("", "llmify-commit-*.msg")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	defer os.Remove(tmpfile.Name()) // Clean up
+
+	// Write initial message to temp file
+	if _, err := tmpfile.WriteString(initialMessage); err != nil {
+		tmpfile.Close()
+		return "", fmt.Errorf("failed to write to temporary file: %w", err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		return "", fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
+	// Prepare and run the editor command
+	cmd := exec.Command(editorPath, tmpfile.Name())
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	fmt.Printf("Launching editor (%s) for commit message...\n", editorPath)
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("editor '%s' failed: %w", editorPath, err)
+	}
+
+	// Read the potentially modified content back
+	contentBytes, err := ioutil.ReadFile(tmpfile.Name())
+	if err != nil {
+		return "", fmt.Errorf("failed to read back from temporary file: %w", err)
+	}
+
+	return string(contentBytes), nil
+}
+
+// ConfirmCommit prompts the user unless force is true. Returns true if commit should proceed.
+func ConfirmCommit(force bool) (bool, bool, error) { // Returns (proceed, editAgain, error)
+	if force {
+		return true, false, nil
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Commit with the edited message? [Y/n/e(dit)] ")
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false, false, fmt.Errorf("failed to read confirmation: %w", err)
+	}
+
+	response = strings.ToLower(strings.TrimSpace(response))
+
+	switch response {
+	case "y", "yes", "": // Default to yes
+		return true, false, nil
+	case "e", "edit":
+		return false, true, nil // Signal to edit again
+	case "n", "no":
+		return false, false, nil // Abort
+	default:
+		fmt.Println("Invalid response. Aborting commit.")
+		return false, false, nil
+	}
+}
 
 ```
 
@@ -915,7 +1895,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/jake/llmify/cmd"
+	"github.com/jake/llmify/internal/config"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -927,9 +1910,10 @@ var (
 	noGitignore   bool
 	noLLMignore   bool
 	excludeBinary bool
-	verbose       bool
+	verboseFlag   bool
 	includeHeader bool
 	rootDir       string // Root directory for the crawl
+	llmTimeout    int    // Timeout in seconds for LLM API calls
 )
 
 func main() {
@@ -941,132 +1925,164 @@ func main() {
 
 var rootCmd = &cobra.Command{
 	Use:   "llmify [directory]",
-	Short: "Generates a concatenated text file (llm.txt) of project code and file tree for LLM context.",
-	Long: `Crawls a project directory, respects .gitignore and .llmignore rules,
-optionally filters by a specific sub-path, and creates a single text file
-containing a file tree visualization followed by the contents of all
-included text files. Useful for providing context to Large Language Models.
+	Short: "Tools to optimize codebases for LLMs and assist with development workflows.",
+	Long: `llmify provides tools to prepare codebases for Large Language Models (LLMs)
+and leverage LLMs for tasks like generating commit messages.
 
-By default, it operates in the current working directory.`,
-	Args: cobra.MaximumNArgs(1), // Allow zero or one argument (the directory)
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Determine root directory
-		if len(args) > 0 {
-			rootDir = args[0]
-		} else {
-			var err error
-			rootDir, err = os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get current working directory: %w", err)
-			}
-		}
+Default behavior (without subcommand):
+Crawls a project directory, respects ignore rules, and creates a single text file
+('llm.txt') containing a file tree and relevant file contents for LLM context.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Bind the verbose flag to viper BEFORE loading config
+		viper.BindPFlag("verbose", cmd.PersistentFlags().Lookup("verbose"))
+		viper.BindPFlag("llm.timeout_seconds", cmd.PersistentFlags().Lookup("llm-timeout")) // Bind timeout config
 
-		// Validate root directory exists
-		info, err := os.Stat(rootDir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("root directory not found: %s", rootDir)
-			}
-			return fmt.Errorf("failed to access root directory %s: %w", rootDir, err)
+		// Load configuration once for all commands
+		if err := config.LoadConfig(); err != nil {
+			return fmt.Errorf("failed to load configuration: %w", err)
 		}
-		if !info.IsDir() {
-			return fmt.Errorf("specified path is not a directory: %s", rootDir)
-		}
-
-		// Normalize the target path relative to the root directory
-		var absTargetPath string
-		if targetPath != "" {
-			// Clean the path and make it relative to rootDir
-			targetPath = filepath.Clean(targetPath)
-			// Ensure it doesn't try to escape the root directory
-			if strings.HasPrefix(targetPath, ".."+string(filepath.Separator)) || targetPath == ".." {
-				return fmt.Errorf("target path cannot be outside the root directory: %s", targetPath)
-			}
-			absTargetPath = filepath.Join(rootDir, targetPath)
-
-			// Check if the target path exists
-			_, err := os.Stat(absTargetPath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					return fmt.Errorf("target path not found: %s", absTargetPath)
-				}
-				return fmt.Errorf("failed to access target path %s: %w", absTargetPath, err)
-			}
-		}
-
-		if verbose {
-			fmt.Printf("Starting crawl in: %s\n", rootDir)
-			if targetPath != "" {
-				fmt.Printf("Filtering for specific path: %s (absolute: %s)\n", targetPath, absTargetPath)
-			}
-			fmt.Printf("Output file: %s\n", outputFile)
-			fmt.Printf("Using .gitignore: %t\n", !noGitignore)
-			fmt.Printf("Using .llmignore: %t\n", !noLLMignore)
-			fmt.Printf("Excluding binary files: %t\n", excludeBinary)
-			fmt.Printf("Max depth: %d (0 means unlimited)\n", maxDepth)
-			fmt.Printf("Command excludes: %v\n", excludes)
-			fmt.Printf("Command includes: %v\n", includes)
-		}
-
-		// --- Main Logic ---
-		// 1. Load ignore rules
-		ignorer, err := LoadIgnoreMatcher(rootDir, !noGitignore, !noLLMignore)
-		if err != nil {
-			return fmt.Errorf("failed to load ignore patterns: %w", err)
-		}
-
-		// 2. Crawl project
-		crawlResult, err := CrawlProject(rootDir, outputFile, targetPath, ignorer, excludes, includes, maxDepth, excludeBinary, verbose)
-		if err != nil {
-			return fmt.Errorf("failed to crawl project: %w", err)
-		}
-
-		// 3. Build the final output content
-		outputContent, err := BuildOutputContent(rootDir, crawlResult, includeHeader)
-		if err != nil {
-			return fmt.Errorf("failed to build output content: %w", err)
-		}
-
-		// 4. Write to output file
-		// Ensure the output path is relative to the CWD *unless* an absolute path was given
-		outputPath := outputFile
-		if !filepath.IsAbs(outputFile) {
-			cwd, _ := os.Getwd() // Error getting CWD unlikely after initial checks
-			outputPath = filepath.Join(cwd, outputFile)
-		} else {
-			// If outputFile is absolute, ensure rootDir comparison works correctly in CrawlProject
-			// This was handled by using absolute paths internally in CrawlProject
-		}
-
-		err = WriteStringToFile(outputPath, outputContent)
-		if err != nil {
-			return fmt.Errorf("failed to write output file %s: %w", outputPath, err)
-		}
-
-		fmt.Printf("Successfully generated LLM context file: %s\n", outputPath)
-		fmt.Printf("Included %d files/directories in the context.\n", crawlResult.IncludedCount)
-		if crawlResult.ExcludedCount > 0 {
-			fmt.Printf("Excluded %d files/directories based on rules.\n", crawlResult.ExcludedCount)
-		}
+		// Set verbose based on viper AFTER loading config/env vars
+		verboseFlag = viper.GetBool("verbose") // Update global var if needed elsewhere
 		return nil
 	},
+	Args: cobra.MaximumNArgs(1), // Root command still takes optional directory for default action
+	RunE: runRootCmd,            // Separate function for root command's logic
+}
+
+// runRootCmd contains the original logic of the root command (context dumping)
+func runRootCmd(cmd *cobra.Command, args []string) error {
+	// Check if a subcommand was executed, if so, don't run root logic
+	// Cobra usually handles this, but an explicit check can be added if needed.
+	// if cmd.HasSubCommands() && cmd.CalledAs() == "llmify" { ... }
+
+	// --- Start of original RunE logic ---
+	if verboseFlag { // Use the flag variable bound to viper
+		fmt.Fprintln(os.Stderr, "Running default context generation...")
+	}
+
+	// Determine root directory (same as before)
+	if len(args) > 0 {
+		rootDir = args[0]
+	} else {
+		var err error
+		rootDir, err = os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current working directory: %w", err)
+		}
+	}
+
+	// Validate root directory (same as before)
+	info, err := os.Stat(rootDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("root directory not found: %s", rootDir)
+		}
+		return fmt.Errorf("failed to access root directory %s: %w", rootDir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("specified path is not a directory: %s", rootDir)
+	}
+
+	// Normalize target path (same as before)
+	var absTargetPath string
+	if targetPath != "" {
+		// Clean the path and make it relative to rootDir
+		targetPath = filepath.Clean(targetPath)
+		// Ensure it doesn't try to escape the root directory
+		if strings.HasPrefix(targetPath, ".."+string(filepath.Separator)) || targetPath == ".." {
+			return fmt.Errorf("target path cannot be outside the root directory: %s", targetPath)
+		}
+		absTargetPath = filepath.Join(rootDir, targetPath)
+
+		// Check if the target path exists
+		_, err := os.Stat(absTargetPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("target path not found: %s", absTargetPath)
+			}
+			return fmt.Errorf("failed to access target path %s: %w", absTargetPath, err)
+		}
+	}
+
+	if verboseFlag {
+		fmt.Fprintf(os.Stderr, "Starting crawl in: %s\n", rootDir)
+		if targetPath != "" {
+			fmt.Fprintf(os.Stderr, "Filtering for specific path: %s (absolute: %s)\n", targetPath, absTargetPath)
+		}
+		fmt.Fprintf(os.Stderr, "Output file: %s\n", outputFile)
+		fmt.Fprintf(os.Stderr, "Using .gitignore: %t\n", !noGitignore)
+		fmt.Fprintf(os.Stderr, "Using .llmignore: %t\n", !noLLMignore)
+		fmt.Fprintf(os.Stderr, "Excluding binary files: %t\n", excludeBinary)
+		fmt.Fprintf(os.Stderr, "Max depth: %d (0 means unlimited)\n", maxDepth)
+		fmt.Fprintf(os.Stderr, "Command excludes: %v\n", excludes)
+		fmt.Fprintf(os.Stderr, "Command includes: %v\n", includes)
+	}
+
+	// --- Main Logic ---
+	// 1. Load ignore rules
+	ignorer, err := LoadIgnoreMatcher(rootDir, !noGitignore, !noLLMignore)
+	if err != nil {
+		return fmt.Errorf("failed to load ignore patterns: %w", err)
+	}
+
+	// 2. Crawl project
+	crawlResult, err := CrawlProject(rootDir, outputFile, targetPath, ignorer, excludes, includes, maxDepth, excludeBinary, verboseFlag)
+	if err != nil {
+		return fmt.Errorf("failed to crawl project: %w", err)
+	}
+
+	// 3. Build the final output content
+	outputContent, err := BuildOutputContent(rootDir, crawlResult, includeHeader)
+	if err != nil {
+		return fmt.Errorf("failed to build output content: %w", err)
+	}
+
+	// 4. Write to output file
+	// Ensure the output path is relative to the CWD *unless* an absolute path was given
+	outputPath := outputFile
+	if !filepath.IsAbs(outputFile) {
+		cwd, _ := os.Getwd() // Error getting CWD unlikely after initial checks
+		outputPath = filepath.Join(cwd, outputFile)
+	} else {
+		// If outputFile is absolute, ensure rootDir comparison works correctly in CrawlProject
+		// This was handled by using absolute paths internally in CrawlProject
+	}
+
+	err = WriteStringToFile(outputPath, outputContent)
+	if err != nil {
+		return fmt.Errorf("failed to write output file %s: %w", outputPath, err)
+	}
+
+	fmt.Printf("Successfully generated LLM context file: %s\n", outputPath)
+	fmt.Printf("Included %d files/directories in the context.\n", crawlResult.IncludedCount)
+	if crawlResult.ExcludedCount > 0 {
+		fmt.Printf("Excluded %d files/directories based on rules.\n", crawlResult.ExcludedCount)
+	}
+	// --- End of original RunE logic ---
+	return nil
 }
 
 func init() {
-	// Setup flags using Cobra
-	rootCmd.Flags().StringVarP(&outputFile, "output", "o", "llm.txt", "Name of the output file")
-	rootCmd.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Glob patterns to exclude (can be used multiple times)")
-	rootCmd.Flags().StringSliceVarP(&includes, "include", "i", []string{}, "Glob patterns to include (overrides excludes, use carefully)")
-	rootCmd.Flags().StringVarP(&targetPath, "path", "p", "", "Only include files/directories within this specific relative path")
-	rootCmd.Flags().IntVarP(&maxDepth, "max-depth", "d", 0, "Maximum directory depth to crawl (0 for unlimited)")
-	rootCmd.Flags().BoolVar(&noGitignore, "no-gitignore", false, "Do not use .gitignore rules")
-	rootCmd.Flags().BoolVar(&noLLMignore, "no-llmignore", false, "Do not use .llmignore rules")
-	rootCmd.Flags().BoolVar(&excludeBinary, "exclude-binary", true, "Attempt to exclude binary files (based on content detection)")
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging to stderr")
-	rootCmd.Flags().BoolVar(&includeHeader, "header", true, "Include a header with project root and timestamp in the output file")
+	// Add global flags to rootCmd PersistentFlags
+	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Enable verbose logging to stderr")
+	rootCmd.PersistentFlags().IntVar(&llmTimeout, "llm-timeout", 120, "Timeout in seconds for LLM API calls")
+	// Add other global flags (e.g., --config path, --provider, --model overrides) if desired
 
-	// Tie persistent flags if needed across subcommands (though we only have one here)
-	// rootCmd.PersistentFlags().StringVar(...)
+	// Flags specific to the root command (context dumping)
+	rootCmd.Flags().StringVarP(&outputFile, "output", "o", "llm.txt", "Name of the output file for context dump")
+	rootCmd.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Glob patterns to exclude for context dump")
+	rootCmd.Flags().StringSliceVarP(&includes, "include", "i", []string{}, "Glob patterns to include for context dump (overrides excludes)")
+	rootCmd.Flags().StringVarP(&targetPath, "path", "p", "", "Only include files/dirs within this path for context dump")
+	rootCmd.Flags().IntVarP(&maxDepth, "max-depth", "d", 0, "Max directory depth for context dump (0 for unlimited)")
+	rootCmd.Flags().BoolVar(&noGitignore, "no-gitignore", false, "Do not use .gitignore rules for context dump")
+	rootCmd.Flags().BoolVar(&noLLMignore, "no-llmignore", false, "Do not use .llmignore rules for context dump")
+	rootCmd.Flags().BoolVar(&excludeBinary, "exclude-binary", true, "Attempt to exclude binary files for context dump")
+	rootCmd.Flags().BoolVar(&includeHeader, "header", true, "Include a header in the context dump output file")
+
+	// Add the new commit command
+	rootCmd.AddCommand(cmd.CommitCmd)
+
+	// Add other commands here later
 }
 
 ```
@@ -1107,21 +2123,23 @@ __tests__/
 ### File: npm/README.md
 
 ```md
-# LLMify
+# 🚀 LLMify
 
-A CLI tool that generates a comprehensive text file containing your codebase context for Large Language Models (LLMs).
+> **A CLI tool that generates a comprehensive text file containing your codebase context for Large Language Models (LLMs)**
 
-## Features
+[![npm version](https://img.shields.io/npm/v/llmify.svg?style=flat-square)](https://www.npmjs.com/package/llmify)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/username/llmify/blob/main/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/username/llmify/pulls)
 
-- Crawls project directories and creates a single output file with:
-  - A visual tree structure of your project
-  - The content of all included text files
-- Respects `.gitignore` and `.llmignore` patterns
-- Intelligently excludes binary files based on content analysis
-- Offers customizable filtering (include/exclude patterns, max depth, specific sub-path)
-- Formats output in a way that's optimized for LLM context
+## ✨ Features
 
-## Installation
+- 📊 **Visual Project Structure** - Crawls project directories and creates a tree structure
+- 📄 **File Content Extraction** - Includes the content of all relevant text files
+- 🧠 **Context Optimization** - Formats output in a way that's optimized for LLM context
+- 🔍 **Intelligent Filtering** - Respects `.gitignore` and `.llmignore` patterns
+- 🛠️ **Highly Customizable** - Control depth, paths, include/exclude patterns
+
+## 📦 Installation
 
 ### Pre-built Binaries
 
@@ -1144,12 +2162,21 @@ sudo mv llmify /usr/local/bin/
 # Or for user-local installation: mv llmify ~/bin/
 ```
 
-## Usage
+## 🚀 Quick Start
 
 ```bash
 # Basic usage - creates llm.txt in the current directory
 llmify
 
+# Paste into your favorite LLM
+cat llm.txt | pbcopy  # macOS
+cat llm.txt | xclip   # Linux
+type llm.txt | clip   # Windows
+```
+
+## 👩‍💻 Usage Examples
+
+```bash
 # Specify a different root directory
 llmify /path/to/your/project
 
@@ -1176,7 +2203,7 @@ llmify --no-gitignore
 llmify -v
 ```
 
-## Using .llmignore
+## 🔧 Using `.llmignore`
 
 Create a `.llmignore` file in your project's root directory to specify patterns that should be excluded from LLM context. This uses the same syntax as `.gitignore`. These rules apply *after* the `--path` filter, if used.
 
@@ -1194,7 +2221,7 @@ docs/generated/
 lib/external/
 ```
 
-## Full CLI Options
+## 🎯 Full CLI Options
 
 ```
 Usage:
@@ -1214,9 +2241,10 @@ Flags:
   -h, --help                 Display help information
 ```
 
-## Example Output
+## 💡 Example Output
 
-The generated file will have this structure:
+<details>
+<summary>Click to see example output</summary>
 
 ```
 ============================================================
@@ -1275,9 +2303,21 @@ package main
 ```
 ```
 
-## License
+</details>
 
-MIT License - See LICENSE file for details. 
+## 📝 License
+
+MIT License - See LICENSE file for details.
+
+---
+
+<p align="center">
+  Made with ❤️ for better LLM interactions
+  <br>
+  <a href="https://github.com/username/llmify">Star on GitHub</a>
+</p> 
+
+
 ```
 
 ---
@@ -1359,8 +2399,8 @@ child.on('exit', (code, signal) => {
 ```json
 {
   "name": "llmify",
-  "version": "0.0.2",
-  "description": "A CLI tool that generates codebase context for LLMs",
+  "version": "0.0.7",
+  "description": "A CLI tool that generates codebase context for LLMs and provides AI-powered development tools",
   "license": "MIT",
   "author": "Jake <jakezegil@gmail.com>",
   "homepage": "https://github.com/jakezegil/llmify",
@@ -1379,7 +2419,13 @@ child.on('exit', (code, signal) => {
     "cli",
     "go",
     "development",
-    "tool"
+    "tool",
+    "git",
+    "commit",
+    "documentation",
+    "openai",
+    "anthropic",
+    "ollama"
   ],
   "main": "cli.js",
   "bin": {
@@ -1516,6 +2562,9 @@ echo -e "${BLUE}Version: ${VERSION}, Commit: ${COMMIT}${NC}"
 # Create build directory if it doesn't exist
 mkdir -p bin
 
+# Ensure npm/bin directory exists
+mkdir -p npm/bin
+
 # Build for the current platform first for quick testing
 echo -e "${BLUE}Building for current platform...${NC}"
 go build -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" -o bin/llmify .
@@ -1534,14 +2583,20 @@ if [[ $BUILD_ALL == "y" ]]; then
         GOOS=${PLATFORM%/*}
         GOARCH=${PLATFORM#*/}
         OUTPUT_NAME="bin/llmify-${GOOS}-${GOARCH}"
+        NPM_OUTPUT_NAME="npm/bin/llmify-${GOOS}-${GOARCH}"
         
         if [ "$GOOS" = "windows" ]; then
             OUTPUT_NAME="${OUTPUT_NAME}.exe"
+            NPM_OUTPUT_NAME="${NPM_OUTPUT_NAME}.exe"
         fi
         
         echo -e "${BLUE}Building for ${GOOS}/${GOARCH}...${NC}"
         GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" -o "${OUTPUT_NAME}" .
-        echo -e "${GREEN}✓ Built ${OUTPUT_NAME}${NC}"
+        
+        # Copy binary to npm/bin directory
+        cp "${OUTPUT_NAME}" "${NPM_OUTPUT_NAME}"
+        
+        echo -e "${GREEN}✓ Built ${OUTPUT_NAME} and copied to npm/bin${NC}"
     done
 fi
 
@@ -1551,7 +2606,7 @@ echo -e "${BLUE}Building npm package...${NC}"
 echo -e "${GREEN}✓ Built npm package${NC}"
 
 echo -e "${GREEN}Build complete!${NC}"
-echo -e "Binaries are available in the ${BLUE}bin/${NC} directory" 
+echo -e "Binaries are available in the ${BLUE}bin/${NC} directory and ${BLUE}npm/bin/${NC} directory" 
 ```
 
 ---
@@ -1597,6 +2652,8 @@ fi
 
 # Create directories
 mkdir -p dist/release
+# Ensure npm/bin directory exists
+mkdir -p npm/bin
 
 # Check for uncommitted changes
 if ! git diff-index --quiet HEAD --; then
@@ -1627,16 +2684,22 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     GOARCH=${PLATFORM#*/}
     BINARY_NAME="llmify"
     ARCHIVE_NAME="llmify-${VERSION_NUM}-${GOOS}-${GOARCH}"
+    NPM_BINARY_NAME="npm/bin/llmify-${GOOS}-${GOARCH}"
     
     if [ "$GOOS" = "windows" ]; then
         BINARY_NAME="${BINARY_NAME}.exe"
         ARCHIVE_NAME="${ARCHIVE_NAME}.zip"
+        NPM_BINARY_NAME="${NPM_BINARY_NAME}.exe"
     else
         ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
     fi
     
     echo -e "${BLUE}Building for ${GOOS}/${GOARCH}...${NC}"
     GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.buildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o "dist/release/${BINARY_NAME}" .
+    
+    # Copy binary to npm/bin directory
+    cp "dist/release/${BINARY_NAME}" "${NPM_BINARY_NAME}"
+    echo -e "${GREEN}✓ Copied binary to npm/bin/${NC}"
     
     # Create archive
     pushd dist/release > /dev/null

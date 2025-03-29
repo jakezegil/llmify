@@ -1,7 +1,7 @@
 {
   "name": "llmify",
-  "version": "0.0.6",
-  "description": "A CLI tool that generates codebase context for LLMs",
+  "version": "0.0.7",
+  "description": "A CLI tool that generates codebase context for LLMs and provides AI-powered development tools",
   "license": "MIT",
   "author": "Jake <jakezegil@gmail.com>",
   "homepage": "https://github.com/jakezegil/llmify",
@@ -20,7 +20,13 @@
     "cli",
     "go",
     "development",
-    "tool"
+    "tool",
+    "git",
+    "commit",
+    "documentation",
+    "openai",
+    "anthropic",
+    "ollama"
   ],
   "main": "cli.js",
   "bin": {
