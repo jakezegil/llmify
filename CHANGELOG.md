@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.0.9 (2025-03-29)
+
+- feat: enhance project crawling and output generation
+- nit
+- chore: bump version to 0.0.8
+- Release v0.0.8
+- chore: add example environment file for OpenAI API key
+- feat: enhance llmify commands with improved functionality
+- Update processData function to support case options
+- feat(refactor): add TypeScript code refactoring functionality
+- feat: add support for automated documentation updates and disable commit message editing
+- feat: update model from gpt-4 to gpt-4o and improve LLM context handling
+- feat: add ai-powered commit message generation and documentation updates
+- updated binaries
+- Release v0.0.6
+- update binaries
+- Release v0.0.5
+- npm readme
+- Release v0.0.4
+- update readme
+- Release v0.0.3
+- add intelligent defaults
+- Release v0.0.2
+- add dummy build script
+- initial release
+
+
 ## v0.0.8 (2025-03-29)
 
 - ``` chore: add example environment file for OpenAI API key
