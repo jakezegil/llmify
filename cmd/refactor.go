@@ -1,288 +1,278 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/jake/llmify/internal/config"
 	"github.com/jake/llmify/internal/llm"
 	"github.com/jake/llmify/internal/refactor"
-	"github.com/jake/llmify/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var (
-	refactorScope        string
-	refactorPrompt       string
-	refactorCheckTypes   bool
-	refactorNoCheckTypes bool
-	refactorShowDiff     bool
-	refactorNoDiff       bool
-	refactorApply        bool
-	refactorForce        bool
-	refactorDryRun       bool
-)
+var refactorCmd = &cobra.Command{
+	Use:   "refactor [file or directory]",
+	Short: "Refactor code using LLM",
+	Long: `Refactor code using LLM. The command can target a single file or a directory.
 
-var RefactorCmd = &cobra.Command{
-	Use:   "refactor <file_or_folder_path>",
-	Short: "Refactor TypeScript code using an LLM based on a prompt.",
-	Long: `Analyzes specified TypeScript code (file or folder), generates refactoring
-suggestions based on your prompt, optionally performs type checking,
-shows a diff, and allows interactive application of changes.`,
+Examples:
+  # Refactor a single file
+  llmify refactor src/components/Button.tsx --prompt "Convert to functional component"
+
+  # Refactor all files in a directory
+  llmify refactor src/ --prompt "Add error handling to all API calls"
+
+  # Refactor with type checking disabled
+  llmify refactor src/utils.ts --prompt "Optimize performance" --no-check-types`,
 	Args: cobra.ExactArgs(1),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		// Bind flags to viper for easy access in other packages
-		viper.BindPFlag("refactor.check_types", cmd.Flags().Lookup("check-types"))
-		viper.BindPFlag("refactor.show_diff", cmd.Flags().Lookup("show-diff"))
-
-		// Validate mutually exclusive flags
-		if refactorDryRun && refactorApply {
-			return fmt.Errorf("--dry-run and --apply cannot be used together")
-		}
-		if refactorNoCheckTypes {
-			viper.Set("refactor.check_types", false)
-		}
-		if refactorNoDiff {
-			viper.Set("refactor.show_diff", false)
-		}
-		if refactorPrompt == "" {
-			return fmt.Errorf("--prompt flag is required")
-		}
-
-		return nil
-	},
 	RunE: runRefactor,
 }
 
 func init() {
-	RefactorCmd.Flags().StringVar(&refactorScope, "scope", "", `Scope of refactoring within file (e.g., "function MyFunc", "class MyClass", "lines 10-20"). Ignored for folders.`)
-	RefactorCmd.Flags().StringVar(&refactorPrompt, "prompt", "", "Required: Describes the desired refactoring goal.")
-	RefactorCmd.Flags().BoolVar(&refactorCheckTypes, "check-types", true, "Run tsc --noEmit to check for type errors after refactoring.")
-	RefactorCmd.Flags().BoolVar(&refactorNoCheckTypes, "no-check-types", false, "Disable TypeScript type checking.")
-	RefactorCmd.Flags().BoolVar(&refactorShowDiff, "show-diff", true, "Show a diff of the proposed changes.")
-	RefactorCmd.Flags().BoolVar(&refactorNoDiff, "no-diff", false, "Do not show diffs of proposed changes.")
-	RefactorCmd.Flags().BoolVar(&refactorApply, "apply", false, "Apply the proposed refactoring changes to the files.")
-	RefactorCmd.Flags().BoolVarP(&refactorForce, "force", "f", false, "Skip confirmation prompts when applying changes.")
-	RefactorCmd.Flags().BoolVar(&refactorDryRun, "dry-run", false, "Show proposed changes and type check results without applying.")
+	rootCmd.AddCommand(refactorCmd)
 
-	// Mark prompt as required
-	RefactorCmd.MarkFlagRequired("prompt")
+	refactorCmd.Flags().StringP("prompt", "p", "", "Prompt describing the refactoring goal (required)")
+	refactorCmd.Flags().StringP("scope", "s", "", "Scope of refactoring (e.g., function name, class name)")
+	refactorCmd.Flags().Bool("check-types", true, "Run language-specific checks after refactoring (e.g., tsc --noEmit for TypeScript)")
+	refactorCmd.Flags().Bool("no-check-types", false, "Disable language-specific checks")
+	refactorCmd.Flags().Bool("show-diff", true, "Show diff of proposed changes")
+	refactorCmd.Flags().Bool("dry-run", false, "Show proposed changes without applying them")
+	refactorCmd.Flags().Bool("apply", false, "Apply changes without confirmation")
+
+	refactorCmd.MarkFlagRequired("prompt")
 }
 
 func runRefactor(cmd *cobra.Command, args []string) error {
-	targetPath := args[0]
+	// Get flags
+	prompt, _ := cmd.Flags().GetString("prompt")
+	scope, _ := cmd.Flags().GetString("scope")
+	checkTypes, _ := cmd.Flags().GetBool("check-types")
+	noCheckTypes, _ := cmd.Flags().GetBool("no-check-types")
+	showDiff, _ := cmd.Flags().GetBool("show-diff")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	autoApply, _ := cmd.Flags().GetBool("apply")
 	verbose := viper.GetBool("verbose")
-	cfg := &config.GlobalConfig
 
-	// --- Determine Target Files ---
-	var targetFiles []string
-	fileInfo, err := os.Stat(targetPath)
-	if err != nil {
-		return fmt.Errorf("invalid target path %s: %w", targetPath, err)
+	// Handle --no-check-types flag
+	if noCheckTypes {
+		checkTypes = false
 	}
 
-	if fileInfo.IsDir() {
-		if refactorScope != "" && verbose {
-			log.Printf("Warning: --scope '%s' ignored when targeting a directory.", refactorScope)
-			refactorScope = "" // Clear scope for directory mode
-		}
-		if verbose {
-			log.Printf("Target is a directory. Searching for TypeScript files in %s...", targetPath)
-		}
-		// Walk the directory - TODO: Respect .gitignore/.llmignore
-		err = filepath.WalkDir(targetPath, func(path string, d os.DirEntry, err error) error {
+	// Set flags in viper for other packages to access
+	viper.Set("refactor.check_types", checkTypes)
+	viper.Set("refactor.show_diff", showDiff)
+
+	// Initialize LLM client
+	if err := config.LoadConfig(); err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+	cfg := &config.GlobalConfig
+
+	llmClient, err := llm.NewLLMClient(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to initialize LLM client: %w", err)
+	}
+
+	// Get target path
+	targetPath := args[0]
+	info, err := os.Stat(targetPath)
+	if err != nil {
+		return fmt.Errorf("failed to access target path %s: %w", targetPath, err)
+	}
+
+	var filesToProcess []string
+
+	// Process directory or single file
+	if info.IsDir() {
+		// Walk directory to find text files
+		err := filepath.Walk(targetPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			// Include .ts and .tsx, exclude .d.ts and node_modules, .git etc.
-			if !d.IsDir() && (strings.HasSuffix(path, ".ts") || strings.HasSuffix(path, ".tsx")) &&
-				!strings.HasSuffix(path, ".d.ts") &&
-				!strings.Contains(path, string(filepath.Separator)+"node_modules"+string(filepath.Separator)) &&
-				!strings.Contains(path, string(filepath.Separator)+".git"+string(filepath.Separator)) {
-				targetFiles = append(targetFiles, path)
+
+			// Skip directories and hidden files/directories
+			if info.IsDir() || strings.HasPrefix(info.Name(), ".") {
+				return nil
 			}
+
+			// Skip common build directories and binary files
+			if shouldSkipPath(path) {
+				return nil
+			}
+
+			// Check if file is likely a text file
+			if isLikelyTextFile(path) {
+				filesToProcess = append(filesToProcess, path)
+			}
+
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("failed to scan directory %s: %w", targetPath, err)
-		}
-		if len(targetFiles) == 0 {
-			fmt.Printf("No TypeScript files found in directory: %s\n", targetPath)
-			return nil
-		}
-		if verbose {
-			log.Printf("Found %d TypeScript files to process.", len(targetFiles))
+			return fmt.Errorf("failed to walk directory %s: %w", targetPath, err)
 		}
 	} else {
-		// Target is a single file
-		if !(strings.HasSuffix(targetPath, ".ts") || strings.HasSuffix(targetPath, ".tsx")) {
-			return fmt.Errorf("target file %s is not a TypeScript file (.ts, .tsx)", targetPath)
+		// Single file
+		if !isLikelyTextFile(targetPath) {
+			return fmt.Errorf("file %s appears to be a binary file", targetPath)
 		}
-		targetFiles = []string{targetPath}
+		filesToProcess = []string{targetPath}
+	}
+
+	if len(filesToProcess) == 0 {
+		return fmt.Errorf("no text files found to process in %s", targetPath)
+	}
+
+	// Process each file
+	var results []*refactor.RefactorResult
+	for _, file := range filesToProcess {
 		if verbose {
-			log.Printf("Target is a single file: %s", targetPath)
-		}
-	}
-
-	// --- Initialize LLM Client ---
-	llmClient, err := llm.NewLLMClient(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to create LLM client: %w", err)
-	}
-
-	// --- Process Files ---
-	results := make([]*refactor.RefactorResult, 0, len(targetFiles))
-
-	// Create a parent context with a reasonable timeout
-	timeoutSeconds := viper.GetInt("llm.timeout_seconds")
-	if timeoutSeconds <= 0 {
-		timeoutSeconds = 300 // 5 minutes default
-	}
-
-	// If we have multiple files to process, allocate more time
-	if len(targetFiles) > 1 {
-		// Increase timeout proportionally to the number of files, with a reasonable cap
-		maxMultiplier := 4 // Cap at 4x the base timeout
-		fileMultiplier := float64(len(targetFiles))
-		if fileMultiplier > float64(maxMultiplier) {
-			fileMultiplier = float64(maxMultiplier)
-		}
-		timeoutSeconds = int(float64(timeoutSeconds) * fileMultiplier)
-		if verbose {
-			log.Printf("Processing %d files, increasing timeout to %d seconds", len(targetFiles), timeoutSeconds)
-		}
-	}
-
-	parentCtx, parentCancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
-	defer parentCancel()
-
-	for _, filePath := range targetFiles {
-		if verbose {
-			log.Printf("--- Processing file: %s ---", filePath)
+			log.Printf("Processing %s...", file)
 		}
 
-		// Check if parent context is already done
-		if parentCtx.Err() != nil {
-			log.Printf("Aborting processing: timeout exceeded for batch processing")
-			break
+		result, err := refactor.ProcessFileRefactor(cmd.Context(), cfg, llmClient, file, scope, prompt)
+		if err != nil {
+			log.Printf("Error processing %s: %v", file, err)
+			continue
 		}
-
-		result, _ := refactor.ProcessFileRefactor(parentCtx, cfg, llmClient, filePath, refactorScope, refactorPrompt)
 		results = append(results, result)
 	}
 
-	// --- Summarize & Apply (If Applicable) ---
-	fmt.Println("\n--- Refactoring Summary ---")
-	filesToConfirm := []*refactor.RefactorResult{}
-	canApplyCount := 0
-	typeErrorCount := 0
-	llmErrorCount := 0
-	noChangeCount := 0
+	// Summarize results
+	var (
+		totalFiles     = len(results)
+		changedFiles   = 0
+		errorFiles     = 0
+		skippedFiles   = 0
+		typeErrors     = 0
+		appliedChanges = 0
+	)
 
-	for _, res := range results {
-		status := "\033[0;32mOK\033[0m" // Green
-		if res.LLMError != nil {
-			status = "\033[0;31mLLM ERROR\033[0m" // Red
-			llmErrorCount++
-		} else if res.TypeCheckError != nil {
-			status = "\033[0;31mTYPECHECK ERROR\033[0m" // Red
-		} else if !res.TypeCheckOK {
-			status = "\033[0;33mTYPE ERRORS\033[0m" // Yellow
-			typeErrorCount++
-		} else if res.ProposedContent == res.OriginalContent {
-			status = "\033[0;90mNO CHANGE\033[0m" // Grey
-			noChangeCount++
+	for _, result := range results {
+		if result.LLMError != nil || result.TypeCheckError != nil || result.EditApplyError != nil {
+			errorFiles++
+			continue
 		}
-
-		fmt.Printf("- %s: %s\n", res.FilePath, status)
-
-		if res.NeedsConfirmation && !refactorDryRun && refactorApply {
-			filesToConfirm = append(filesToConfirm, res)
-			if res.TypeCheckOK {
-				canApplyCount++
-			}
+		if !result.NeedsConfirmation {
+			skippedFiles++
+			continue
+		}
+		changedFiles++
+		if !result.TypeCheckOK {
+			typeErrors++
+		}
+		if !dryRun && (autoApply || confirmChanges(result)) {
+			result.Apply = true
+			appliedChanges++
 		}
 	}
-	fmt.Println("-------------------------")
 
-	if refactorDryRun {
-		fmt.Println("Dry run complete. No changes were applied.")
-		return nil
-	}
-
-	if !refactorApply {
-		fmt.Println("Run with --apply to apply suggested changes.")
-		return nil
-	}
-
-	// Apply changes (potentially with confirmation)
-	appliedCount := 0
-	skippedCount := 0
-	forceApplyAll := refactorForce
-
-	if len(filesToConfirm) == 0 {
-		fmt.Println("No applicable changes found to apply.")
-		return nil
-	}
-
-	fmt.Println("\n--- Applying Changes ---")
-	for _, res := range filesToConfirm {
-		applyThisFile := false
-		if forceApplyAll {
-			if res.TypeCheckOK {
-				applyThisFile = true
-				fmt.Printf("Applying changes to %s (forced, type check OK)...\n", res.FilePath)
-			} else {
-				fmt.Printf("Skipping force-apply for %s due to type check failures.\n", res.FilePath)
-				skippedCount++
-				continue
-			}
-		} else {
-			// Individual confirmation
-			prompt := fmt.Sprintf("Apply changes to %s?", res.FilePath)
-			defaultChoice := "N"
-			if res.TypeCheckOK {
-				defaultChoice = "Y"
-			} else {
-				prompt = fmt.Sprintf("\033[0;33mWARNING: Type errors detected!\033[0m Apply changes to %s anyway?", res.FilePath)
-			}
-
-			confirmed, err := ui.Confirm(prompt, defaultChoice)
-			if err != nil {
-				log.Printf("Error during confirmation for %s: %v. Skipping file.", res.FilePath, err)
-				skippedCount++
-				continue
-			}
-			if confirmed {
-				applyThisFile = true
-				fmt.Printf("Applying changes to %s...\n", res.FilePath)
-			} else {
-				fmt.Printf("Skipping changes for %s.\n", res.FilePath)
-				skippedCount++
-			}
-		}
-
-		if applyThisFile {
-			err := os.WriteFile(res.FilePath, []byte(res.ProposedContent), 0644)
-			if err != nil {
-				log.Printf("ERROR: Failed to write changes to %s: %v", res.FilePath, err)
-			} else {
-				appliedCount++
+	// Apply changes
+	if !dryRun {
+		for _, result := range results {
+			if result.Apply {
+				if err := os.WriteFile(result.FilePath, []byte(result.ProposedContent), 0644); err != nil {
+					log.Printf("Error writing changes to %s: %v", result.FilePath, err)
+					errorFiles++
+					appliedChanges--
+				}
 			}
 		}
 	}
 
-	fmt.Println("----------------------")
-	fmt.Printf("Applied changes to %d file(s).\n", appliedCount)
-	if skippedCount > 0 {
-		fmt.Printf("Skipped applying changes to %d file(s).\n", skippedCount)
+	// Print summary
+	fmt.Printf("\nSummary:\n")
+	fmt.Printf("Total files processed: %d\n", totalFiles)
+	fmt.Printf("Files with changes: %d\n", changedFiles)
+	fmt.Printf("Files with errors: %d\n", errorFiles)
+	fmt.Printf("Files skipped: %d\n", skippedFiles)
+	fmt.Printf("Files with type errors: %d\n", typeErrors)
+	if !dryRun {
+		fmt.Printf("Changes applied: %d\n", appliedChanges)
 	}
 
 	return nil
+}
+
+// shouldSkipPath returns true if the path should be skipped
+func shouldSkipPath(path string) bool {
+	// Skip common build and dependency directories
+	skipDirs := []string{
+		"node_modules",
+		"dist",
+		"build",
+		"bin",
+		"obj",
+		"target",
+		"vendor",
+		".git",
+	}
+
+	// Skip common binary and generated files
+	skipExtensions := []string{
+		".exe", ".dll", ".so", ".dylib", // Binaries
+		".jpg", ".jpeg", ".png", ".gif", ".ico", // Images
+		".pdf", ".doc", ".docx", // Documents
+		".zip", ".tar", ".gz", ".7z", // Archives
+		".min.js", ".min.css", // Minified files
+	}
+
+	// Check directory parts
+	parts := strings.Split(path, string(os.PathSeparator))
+	for _, part := range parts {
+		for _, skip := range skipDirs {
+			if part == skip {
+				return true
+			}
+		}
+	}
+
+	// Check file extension
+	ext := strings.ToLower(filepath.Ext(path))
+	for _, skip := range skipExtensions {
+		if ext == skip {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isLikelyTextFile returns true if the file is likely a text file
+func isLikelyTextFile(path string) bool {
+	// Common text file extensions
+	textExtensions := []string{
+		// Programming languages
+		".ts", ".tsx", ".js", ".jsx", ".go", ".py", ".rb", ".php", ".java", ".cs", ".cpp", ".c", ".h",
+		// Web
+		".html", ".css", ".scss", ".sass", ".less", ".json", ".xml", ".yaml", ".yml",
+		// Config
+		".toml", ".ini", ".env", ".conf", ".config",
+		// Documentation
+		".md", ".txt", ".rst", ".adoc",
+		// Shell
+		".sh", ".bash", ".zsh", ".fish",
+	}
+
+	ext := strings.ToLower(filepath.Ext(path))
+	for _, textExt := range textExtensions {
+		if ext == textExt {
+			return true
+		}
+	}
+
+	// For files without extensions or unknown extensions,
+	// we could add more sophisticated checks here (e.g., reading first few bytes)
+	// but for now, we'll be conservative and only process known text files
+	return false
+}
+
+func confirmChanges(result *refactor.RefactorResult) bool {
+	fmt.Printf("\nApply changes to %s? [y/N] ", result.FilePath)
+	var response string
+	fmt.Scanln(&response)
+	return strings.ToLower(response) == "y"
 }

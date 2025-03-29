@@ -24,36 +24,71 @@ Here is the git diff:
 Generate the commit message now:
 `
 
+// docsUpdatePromptTemplate is used for updating documentation based on code changes
 const docsUpdatePromptTemplate = `
-You are an expert technical writer tasked with updating documentation based on code changes.
-Analyze the following code changes (provided as a git diff) and the existing documentation section.
+You are an expert technical writer specializing in clear and accurate documentation.
+Your task is to update the provided documentation based on code changes, ensuring it remains accurate and helpful.
 
-Update the documentation provided below ONLY IF NECESSARY to accurately reflect the code changes.
-Focus on:
-- Changes to function signatures, parameters, or return types.
-- Added or removed features relevant to the documentation.
-- Changes in usage examples.
-- Clarifications needed based on the code modifications.
-
-If the documentation section does not need any updates based on the provided diff, respond with the exact phrase: "NO_UPDATE_NEEDED" and nothing else.
-
-Otherwise, provide the COMPLETE, updated documentation section. Do NOT just describe the changes; output the full modified text.
-
-Here is the git diff of the code changes:
---- DIFF START ---
+USER'S DOCUMENTATION UPDATE GOAL:
 %s
---- DIFF END ---
 
-Here is the CURRENT documentation section to update:
---- DOCS START ---
+CONTEXT (Code Changes):
+--- CONTEXT START ---
 %s
---- DOCS END ---
+--- CONTEXT END ---
 
-Provide the updated documentation section or "NO_UPDATE_NEEDED":
+TARGET DOCUMENTATION:
+--- TARGET START ---
+%s
+--- TARGET END ---
+
+IMPORTANT INSTRUCTIONS:
+1. Only update the documentation if necessary based on the code changes.
+2. Focus on changes to:
+   - Function signatures
+   - Parameters
+   - Return types
+   - Added/removed features
+   - Usage examples
+   - Clarifications based on code changes
+3. Do not make unnecessary changes or add speculative information.
+4. Preserve existing formatting and style.
+5. If no updates are needed, respond with exactly: NO_UPDATE_NEEDED
+
+OUTPUT FORMAT:
+If changes are needed, provide them in one of these formats:
+
+1. For replacing existing content:
+--- LLMIFY REPLACE START ---
+<<< ORIGINAL >>>
+[The exact lines to be replaced]
+<<< REPLACEMENT >>>
+[The new lines to replace the original block]
+--- LLMIFY REPLACE END ---
+
+2. For inserting new content:
+--- LLMIFY INSERT_AFTER START ---
+<<< CONTEXT_LINE >>>
+[The exact line content *immediately preceding* the desired insertion point]
+<<< INSERTION >>>
+[The new lines to be inserted]
+--- LLMIFY INSERT_AFTER END ---
+
+3. For deleting content:
+--- LLMIFY DELETE START ---
+<<< CONTENT >>>
+[The exact lines to be deleted]
+--- LLMIFY DELETE END ---
+
+If the changes are too extensive or complex for the edit format, provide the complete updated content enclosed in triple backticks:
+` + "```" + `markdown
+[Complete updated content]
+` + "```" + `
 `
 
+// refactorPromptTemplate is used for refactoring code snippets
 const refactorPromptTemplate = `
-You are an expert TypeScript developer specializing in safe and effective code refactoring.
+You are an expert developer specializing in safe and effective code refactoring.
 Your task is to refactor the provided code snippet based on the user's request, ensuring correctness and maintaining necessary imports.
 
 USER'S REFACTORING GOAL:
@@ -69,10 +104,45 @@ TARGET CODE SNIPPET (or Full File Content):
 %s
 --- TARGET CODE END ---
 
-Please provide the COMPLETE, refactored code for the TARGET section.
-If refactoring the entire file, include necessary import statements (added or removed).
-Do NOT add explanations, comments about your changes, or typescript markers unless they are part of the actual code.
-Output ONLY the refactored code.
+IMPORTANT INSTRUCTIONS:
+1. Provide ONLY the complete refactored code with no additional text.
+2. Do NOT include markdown code blocks or triple backticks.
+3. Do NOT include any explanations or comments about your changes.
+4. If refactoring the entire file, include necessary import statements.
+5. The output should be valid code that can be directly saved to a file.
+6. Do NOT add any unnecessary imports or modules.
+7. Preserve existing imports and only add new ones if absolutely necessary.
+8. Preserve original indentation and formatting.
+
+OUTPUT FORMAT:
+If the changes are targeted and specific, provide them in one of these formats:
+
+1. For replacing existing code:
+--- LLMIFY REPLACE START ---
+<<< ORIGINAL >>>
+[The exact lines to be replaced]
+<<< REPLACEMENT >>>
+[The new lines to replace the original block]
+--- LLMIFY REPLACE END ---
+
+2. For inserting new code:
+--- LLMIFY INSERT_AFTER START ---
+<<< CONTEXT_LINE >>>
+[The exact line content *immediately preceding* the desired insertion point]
+<<< INSERTION >>>
+[The new lines to be inserted]
+--- LLMIFY INSERT_AFTER END ---
+
+3. For deleting code:
+--- LLMIFY DELETE START ---
+<<< CONTENT >>>
+[The exact lines to be deleted]
+--- LLMIFY DELETE END ---
+
+If the changes are too extensive or complex for the edit format, provide the complete updated content enclosed in triple backticks:
+` + "```" + `language
+[Complete updated content]
+` + "```" + `
 `
 
 func CreateCommitPrompt(diff string, context string) string {
