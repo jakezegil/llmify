@@ -87,40 +87,59 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		repoRoot = "." // Fallback
 	}
 
-	// TODO: Add token limiting logic here if context gets too large
-	const maxContextChars = 100000 // Example limit, adjust as needed
+	const maxContextChars = 100 * 1000 // Conservative limit to leave room for prompts and responses
 	currentChars := 0
+	filesIncluded := 0
 
 	for _, fileRelPath := range stagedFiles {
 		fullPath := filepath.Join(repoRoot, fileRelPath)
+		if verbose {
+			log.Printf("Processing file: %s", fullPath)
+		}
+
 		// Check if file exists before reading (it might be a deleted file in the diff)
 		if _, statErr := os.Stat(fullPath); os.IsNotExist(statErr) {
 			contextBuilder.WriteString(fmt.Sprintf("\n--- File (Deleted): %s ---\n", fileRelPath))
+			filesIncluded++
 			continue
 		}
 
 		content, readErr := os.ReadFile(fullPath)
 		if readErr != nil {
 			log.Printf("Warning: could not read file %s: %v", fileRelPath, readErr)
-			content = []byte(fmt.Sprintf("Error reading file: %v", readErr))
+			contextBuilder.WriteString(fmt.Sprintf("\n--- File (Error): %s ---\nError reading file: %v\n", fileRelPath, readErr))
+			filesIncluded++
+			continue
 		}
 
 		fileHeader := fmt.Sprintf("\n--- File: %s ---\n", fileRelPath)
-		if currentChars+len(fileHeader)+len(content) > maxContextChars {
+		fileContent := string(content)
+
+		// Check if adding this file would exceed the context limit
+		if currentChars+len(fileHeader)+len(fileContent) > maxContextChars {
 			remainingSpace := maxContextChars - currentChars - len(fileHeader) - 20 // reserve space for truncation message
 			if remainingSpace > 0 {
 				contextBuilder.WriteString(fileHeader)
-				contextBuilder.Write(content[:remainingSpace])
+				contextBuilder.WriteString(fileContent[:remainingSpace])
 				contextBuilder.WriteString("\n... (file truncated)\n")
+				filesIncluded++
 			}
-			log.Printf("Warning: Context truncated due to size limits. Files included: %d of %d", len(contextBuilder.String()), len(stagedFiles)) // Crude count
-			break                                                                                                                                 // Stop adding more files
+			if verbose {
+				log.Printf("Warning: Context limit reached. Files included: %d of %d", filesIncluded, len(stagedFiles))
+			}
+			break
 		}
 
 		contextBuilder.WriteString(fileHeader)
-		contextBuilder.Write(content)
-		currentChars += len(fileHeader) + len(content)
+		contextBuilder.WriteString(fileContent)
+		currentChars += len(fileHeader) + len(fileContent)
+		filesIncluded++
 	}
+
+	if verbose {
+		log.Printf("Context gathered: %d files included, %d characters total", filesIncluded, currentChars)
+	}
+
 	fullContext := contextBuilder.String()
 
 	// --- 3. Create LLM Client ---
@@ -137,15 +156,63 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	if verbose {
 		log.Printf("Generating commit message using model: %s...", commitModel)
 	}
-	commitPrompt := llm.CreateCommitPrompt(diff, fullContext)
-	// Use context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(viper.GetInt("llm.timeout_seconds"))*time.Second) // Add timeout config
-	defer cancel()
 
-	proposedMessage, err := llmClient.Generate(ctx, commitPrompt, commitModel)
-	if err != nil {
-		return fmt.Errorf("failed to generate commit message: %w", err)
+	// Get timeout from config or use a reasonable default
+	timeoutSeconds := viper.GetInt("llm.timeout_seconds")
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 60 // Default to 60 seconds if not set or invalid
 	}
+	if verbose {
+		log.Printf("Using timeout of %d seconds for LLM request", timeoutSeconds)
+	}
+
+	// Create the commit prompt
+	commitPrompt := llm.CreateCommitPrompt(diff, fullContext)
+
+	// Log the size of our request for debugging
+	if verbose {
+		log.Printf("Request size - Diff: %d chars, Context: %d chars", len(diff), len(fullContext))
+	}
+
+	// Generate the commit message with retries
+	var proposedMessage string
+	maxRetries := 3
+	var lastErr error
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			if verbose {
+				log.Printf("Retry attempt %d of %d...", attempt, maxRetries)
+			}
+			// Create a new context for each retry
+			ctx, cancel = context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
+		} else {
+			// First attempt
+			ctx, cancel = context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
+		}
+		defer cancel()
+
+		proposedMessage, lastErr = llmClient.Generate(ctx, commitPrompt, commitModel)
+		if lastErr == nil {
+			break // Success, exit retry loop
+		}
+
+		// Check if it's a timeout error
+		if strings.Contains(lastErr.Error(), "context deadline exceeded") {
+			if attempt < maxRetries {
+				if verbose {
+					log.Printf("Request timed out, will retry...")
+				}
+				continue
+			}
+		}
+
+		// For other errors or if we're out of retries, return the error
+		return fmt.Errorf("failed to generate commit message (attempt %d/%d): %w", attempt, maxRetries, lastErr)
+	}
+
 	proposedMessage = strings.TrimSpace(proposedMessage) // Clean up LLM output
 
 	// --- 5. Handle --docs flag ---
