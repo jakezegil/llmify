@@ -1,4 +1,16 @@
-markdown
+# Changelog
+
+## v0.0.8 (2025-03-29)
+
+- ``` chore: add example environment file for OpenAI API key
+- ``` feat: enhance llmify commands with improved functionality
+- Update processData function to support case options
+- ```markdown feat(refactor): add TypeScript code refactoring functionality
+- ```plaintext feat: add support for automated documentation updates and disable commit message editing
+- ```plaintext feat: update model from gpt-4 to gpt-4o and improve LLM context handling
+- ```plaintext feat: add ai-powered commit message generation and documentation updates
+- updated binaries
+
 # Changelog
 
 ## v0.0.8 (2025-03-30)
