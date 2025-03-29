@@ -20,6 +20,7 @@ import (
 var (
 	commitUpdateDocs bool
 	commitForce      bool
+	commitNoEdit     bool
 )
 
 var CommitCmd = &cobra.Command{
@@ -34,6 +35,7 @@ and optionally updates documentation files before committing.`,
 func init() {
 	CommitCmd.Flags().BoolVar(&commitUpdateDocs, "docs", false, "Attempt to automatically update relevant documentation files (*.md) based on changes.")
 	CommitCmd.Flags().BoolVarP(&commitForce, "force", "f", false, "Skip the final confirmation prompt before committing.")
+	CommitCmd.Flags().BoolVar(&commitNoEdit, "no-edit", false, "Disable editing of the commit message.")
 	// Add other flags if necessary
 }
 
@@ -306,15 +308,9 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		fmt.Println(finalMessage)
 		fmt.Println("-----------------------------")
 
-		// Allow editing
-		editedMessage, editErr := ui.EditCommitMessage(finalMessage)
-		if editErr != nil {
-			return fmt.Errorf("failed during commit message editing: %w", editErr)
-		}
-		finalMessage = strings.TrimSpace(editedMessage)
-		if finalMessage == "" {
-			fmt.Println("Commit aborted: Empty commit message.")
-			return nil
+		if !commitNoEdit {
+			fmt.Println("\nTo edit the message, use: git commit --amend")
+			fmt.Println("Or press 'n' to try generating a new message.")
 		}
 
 		// Confirm
@@ -330,7 +326,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 			fmt.Println("Commit aborted.")
 			return nil // User chose 'no'
 		}
-		// Otherwise, loop back to edit again
+		// Otherwise, loop back to show message again
 	}
 
 	// --- 7. Execute Commit ---

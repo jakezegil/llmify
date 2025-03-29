@@ -3,7 +3,9 @@ package git
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -87,4 +89,99 @@ func GetRepoRoot() (string, error) {
 		return "", fmt.Errorf("failed to find git repository root: %w", err)
 	}
 	return root, nil
+}
+
+// GetDiffFromCommits returns the diff and commit messages from the last N commits
+func GetDiffFromCommits(n int) (string, []string, error) {
+	// Get commit messages
+	commitMsgs, err := runGitCommand("log", "-n", fmt.Sprintf("%d", n), "--pretty=format:%s")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get commit messages: %w", err)
+	}
+	messages := strings.Split(commitMsgs, "\n")
+
+	// Get diff
+	diff, err := runGitCommand("diff", fmt.Sprintf("HEAD~%d", n), "HEAD")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get diff: %w", err)
+	}
+
+	return diff, messages, nil
+}
+
+// FilterDiffByPath filters a diff to only include changes in the specified path
+func FilterDiffByPath(diff, path string) (string, error) {
+	// Create a temporary file with the diff
+	tmpFile, err := os.CreateTemp("", "llmify-diff-*.patch")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// Write diff to temp file
+	if _, err := tmpFile.WriteString(diff); err != nil {
+		return "", fmt.Errorf("failed to write diff to temp file: %w", err)
+	}
+
+	// Use git apply to filter the diff
+	filteredDiff, err := runGitCommand("apply", "--cached", "--numstat", tmpFile.Name())
+	if err != nil {
+		return "", fmt.Errorf("failed to filter diff: %w", err)
+	}
+
+	return filteredDiff, nil
+}
+
+// FindRelevantDocs finds documentation files that may need updates based on the diff
+func FindRelevantDocs(diff string) ([]string, error) {
+	// Get list of changed files from diff
+	changedFiles, err := runGitCommand("diff", "--name-only", "HEAD~1", "HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get changed files: %w", err)
+	}
+
+	// Common documentation directories and file patterns
+	docDirs := []string{
+		"docs",
+		"doc",
+		"documentation",
+		".",
+	}
+	docPatterns := []string{
+		"*.md",
+		"*.rst",
+		"*.txt",
+		"*.adoc",
+		"*.asciidoc",
+	}
+
+	var relevantDocs []string
+	for _, file := range strings.Split(changedFiles, "\n") {
+		// Check if file is in a documentation directory
+		dir := filepath.Dir(file)
+		for _, docDir := range docDirs {
+			if strings.HasPrefix(dir, docDir) {
+				// Check if file matches documentation patterns
+				for _, pattern := range docPatterns {
+					if matched, _ := filepath.Match(pattern, filepath.Base(file)); matched {
+						relevantDocs = append(relevantDocs, file)
+						break
+					}
+				}
+				break
+			}
+		}
+	}
+
+	return relevantDocs, nil
+}
+
+// ReadFile reads a file from the repository
+func ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
+
+// WriteFile writes content to a file in the repository
+func WriteFile(path string, content []byte) error {
+	return os.WriteFile(path, content, 0644)
 }
