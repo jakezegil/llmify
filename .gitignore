@@ -18,6 +18,7 @@ go.work
 npm/node_modules/
 npm/coverage/
 npm/dist/
+npm/bin/*
 
 # Editor and OS files
 .idea/
