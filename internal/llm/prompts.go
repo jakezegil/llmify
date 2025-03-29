@@ -16,6 +16,11 @@ The commit message should have:
 3. A blank line.
 4. A detailed body explaining the 'what' and 'why' of the changes. Be specific. Mention key functions/files modified and the reasoning. If it fixes an issue, reference it.
 
+NEVER include triple backticks. Start your message with the <type>.
+
+Example: 
+feat: add new feature...
+
 Here is the git diff:
 --- DIFF START ---
 %s

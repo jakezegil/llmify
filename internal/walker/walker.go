@@ -1,8 +1,10 @@
 package walker
 
 import (
+	"fmt"
 	"io/fs"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +16,148 @@ import (
 
 // WalkCallback is the function signature for the callback used by WalkProjectFiles.
 type WalkCallback func(repoRoot, filePathRel string, lang string, d fs.DirEntry) error
+
+// FileCallback is the function signature for the callback used by WalkFiles.
+type FileCallback func(filePath string, content string) error
+
+// GenerateFileTree generates a tree representation of the project structure.
+func GenerateFileTree(startPath string) (string, error) {
+	var treeBuilder strings.Builder
+	verbose := viper.GetBool("verbose")
+
+	// Get absolute path
+	absPath, err := filepath.Abs(startPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Get base directory name
+	baseDir := filepath.Base(absPath)
+
+	// Start with the base directory
+	treeBuilder.WriteString(baseDir + "\n")
+
+	// Walk the directory
+	err = filepath.WalkDir(absPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if verbose {
+				log.Printf("Warning: Error accessing %s: %v", path, err)
+			}
+			return nil
+		}
+
+		// Skip the root directory itself
+		if path == absPath {
+			return nil
+		}
+
+		// Get relative path
+		relPath, err := filepath.Rel(absPath, path)
+		if err != nil {
+			if verbose {
+				log.Printf("Warning: Could not get relative path for %s: %v", path, err)
+			}
+			return nil
+		}
+
+		// Calculate depth
+		depth := strings.Count(relPath, string(filepath.Separator))
+		if d.IsDir() {
+			depth++
+		}
+
+		// Add indentation and tree characters
+		indent := strings.Repeat("  ", depth)
+		prefix := "├── "
+		if d.IsDir() {
+			prefix = "└── "
+		}
+
+		// Add the entry
+		treeBuilder.WriteString(indent + prefix + d.Name() + "\n")
+
+		return nil
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to walk directory: %w", err)
+	}
+
+	return treeBuilder.String(), nil
+}
+
+// WalkFiles walks through files in the directory and calls the callback for each file.
+func WalkFiles(startPath string, callback FileCallback) error {
+	verbose := viper.GetBool("verbose")
+
+	// Get absolute path
+	absPath, err := filepath.Abs(startPath)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Load ignore patterns
+	ignorer, err := gitignore.CompileIgnoreFile(filepath.Join(absPath, ".gitignore"))
+	if err != nil && verbose {
+		log.Printf("Note: No .gitignore file found: %v", err)
+	}
+
+	// Walk the directory
+	err = filepath.WalkDir(absPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if verbose {
+				log.Printf("Warning: Error accessing %s: %v", path, err)
+			}
+			return nil
+		}
+
+		// Skip directories
+		if d.IsDir() {
+			return nil
+		}
+
+		// Skip ignored files
+		if ignorer != nil && ignorer.MatchesPath(path) {
+			if verbose {
+				log.Printf("Skipping ignored file: %s", path)
+			}
+			return nil
+		}
+
+		// Skip binary files
+		isText, err := util.IsLikelyTextFile(path)
+		if err != nil {
+			if verbose {
+				log.Printf("Warning: Failed to check file type for %s: %v", path, err)
+			}
+			return nil
+		}
+		if !isText {
+			if verbose {
+				log.Printf("Skipping binary file: %s", path)
+			}
+			return nil
+		}
+
+		// Read file content
+		content, err := os.ReadFile(path)
+		if err != nil {
+			if verbose {
+				log.Printf("Warning: Failed to read file %s: %v", path, err)
+			}
+			return nil
+		}
+
+		// Call the callback
+		return callback(path, string(content))
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to walk directory: %w", err)
+	}
+
+	return nil
+}
 
 // WalkProjectFiles walks the directory structure, detects language, checks ignores,
 // and calls the callback for relevant text files.

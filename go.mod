@@ -1,19 +1,21 @@
 module github.com/jake/llmify
 
-go 1.21.6
+go 1.21.0
+
+toolchain go1.21.6
 
 require (
+	github.com/gobwas/glob v0.2.3
 	github.com/joho/godotenv v1.5.1
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/sashabaranov/go-openai v1.38.1
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.20.1
 )
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect

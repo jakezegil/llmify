@@ -37,72 +37,85 @@ var DefaultBinaryExtensions = map[string]struct{}{
 	"package-lock.json": {}, "yarn.lock": {}, "composer.lock": {}, "go.sum": {}, "Cargo.lock": {}, "Gemfile.lock": {}, "Pipfile.lock": {}, "poetry.lock": {}, "pnpm-lock.yaml": {},
 }
 
-// IsLikelyTextFile checks if a file is likely text-based.
-// It uses extension check first, then content analysis.
-func IsLikelyTextFile(path string) (bool, error) {
-	// 1. Check by filename/extension for known binary types or locks
-	baseName := filepath.Base(path)
-	ext := strings.ToLower(filepath.Ext(baseName))
-
-	if _, isKnownBinary := DefaultBinaryExtensions[ext]; isKnownBinary {
-		return false, nil
-	}
-	// Check full filename for files like lockfiles without extensions
-	if _, isKnownBinary := DefaultBinaryExtensions[baseName]; isKnownBinary {
-		return false, nil
-	}
-
-	// 2. Check content for binary indicators
-	file, err := os.Open(path)
+// IsLikelyTextFile checks if a file is likely to be a text file.
+func IsLikelyTextFile(filePath string) (bool, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
-		return false, fmt.Errorf("could not open file %s: %w", path, err)
+		return false, fmt.Errorf("opening file %s: %w", filePath, err)
 	}
 	defer file.Close()
 
-	// Read a chunk (e.g., first 4KB)
-	buffer := make([]byte, 4096)
-	n, err := file.Read(buffer)
+	// Read first 1024 bytes
+	buf := make([]byte, 1024)
+	n, err := file.Read(buf)
 	if err != nil && err != io.EOF {
-		return false, fmt.Errorf("could not read file %s: %w", path, err)
+		return false, fmt.Errorf("reading file %s: %w", filePath, err)
 	}
 
-	if n == 0 {
-		return true, nil // Empty file is considered text
+	// Check if the content is valid UTF-8
+	if !utf8.Valid(buf[:n]) {
+		return false, nil
 	}
 
-	chunk := buffer[:n]
+	// Check for common binary file signatures
+	// This is a basic check - you might want to add more signatures
+	binarySignatures := [][]byte{
+		{0x00, 0x00, 0x00}, // Null bytes
+		{0xFF, 0xD8, 0xFF}, // JPEG
+		{0x89, 0x50, 0x4E}, // PNG
+		{0x47, 0x49, 0x46}, // GIF
+		{0x49, 0x49, 0x2A}, // TIFF
+		{0x4D, 0x4D, 0x00}, // TIFF
+		{0x25, 0x50, 0x44}, // PDF
+		{0x50, 0x4B, 0x03}, // ZIP
+		{0x1F, 0x8B, 0x08}, // GZIP
+		{0x37, 0x7A, 0xBC}, // 7Z
+		{0x52, 0x61, 0x72}, // RAR
+		{0x4D, 0x5A, 0x90}, // EXE/DLL
+		{0x7F, 0x45, 0x4C}, // ELF
+		{0xCA, 0xFE, 0xBA}, // Java class
+		{0xFE, 0xED, 0xFA}, // Mach-O
+		{0x00, 0x00, 0xFE}, // Mach-O
+	}
 
-	// Check for UTF-16 BOMs (treat as binary for simplicity for now)
-	if len(chunk) >= 2 {
-		if (chunk[0] == 0xFE && chunk[1] == 0xFF) || (chunk[0] == 0xFF && chunk[1] == 0xFE) {
-			return false, nil // UTF-16 BOM detected
+	for _, sig := range binarySignatures {
+		if bytes.HasPrefix(buf[:n], sig) {
+			return false, nil
 		}
 	}
 
-	// Check for excessive null bytes (common in binary files)
-	nullCount := bytes.Count(chunk, []byte{0})
-	if n > 0 && float64(nullCount)/float64(n) > 0.1 { // More than 10% null bytes suggests binary
+	// Check for high ratio of control characters
+	controlChars := 0
+	for i := 0; i < n; i++ {
+		if buf[i] < 32 && buf[i] != 9 && buf[i] != 10 && buf[i] != 13 { // Tab, LF, CR
+			controlChars++
+		}
+	}
+	if float64(controlChars)/float64(n) > 0.3 { // More than 30% control characters
 		return false, nil
 	}
 
-	// Check for non-printable characters / non-UTF8
-	if !utf8.Valid(chunk) {
-		return false, nil
-	}
-
-	return true, nil // Likely text if it passes checks
+	return true, nil
 }
 
-// ReadFileContent reads file content as a string, assuming UTF-8.
+// ReadFileContent reads a file's content, handling different encodings.
 func ReadFileContent(path string) (string, error) {
 	contentBytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("reading file %s: %w", path, err)
 	}
-	if !utf8.Valid(contentBytes) {
-		return "", fmt.Errorf("file %s contains invalid UTF-8 sequences", path)
+
+	if utf8.Valid(contentBytes) {
+		return string(contentBytes), nil
 	}
-	return string(contentBytes), nil
+
+	// If not valid UTF-8, try Latin-1 (ISO-8859-1) as a fallback
+	var latin1Builder strings.Builder
+	latin1Builder.Grow(len(contentBytes))
+	for _, b := range contentBytes {
+		latin1Builder.WriteRune(rune(b))
+	}
+	return latin1Builder.String(), nil
 }
 
 // WriteStringToFile writes a string to a file, creating directories if needed.
