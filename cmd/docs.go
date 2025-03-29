@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,7 +13,8 @@ import (
 	"github.com/jake/llmify/internal/editor"
 	"github.com/jake/llmify/internal/git"
 	"github.com/jake/llmify/internal/llm"
-	"github.com/jake/llmify/internal/refactor"
+	"github.com/jake/llmify/internal/walker"
+	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -21,149 +23,111 @@ var docsCmd = &cobra.Command{
 	Use:   "docs [file or directory]",
 	Short: "Update documentation using LLM",
 	Long: `Update documentation using LLM. The command can target a single file or a directory.
+If no file or directory is specified, the current directory will be used.
 
 Examples:
-  # Update a single documentation file
-  llmify docs README.md --prompt "Update installation instructions"
+  # Update all documentation in current directory based on code changes
+  llmify docs
 
-  # Update all documentation in a directory
+  # Update documentation with a specific goal
+  llmify docs --prompt "Update installation instructions"
+
+  # Update a specific file with default prompt
+  llmify docs README.md
+
+  # Update all documentation in a directory with a specific goal
   llmify docs docs/ --prompt "Update API documentation"
 
   # Update without staging changes
-  llmify docs docs/api.md --prompt "Add new endpoint docs" --no-stage`,
-	Args: cobra.ExactArgs(1),
-	RunE: runDocs,
-}
+  llmify docs docs/api.md --no-stage`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Get flags
+		prompt, _ := cmd.Flags().GetString("prompt")
+		if prompt == "" {
+			prompt = "Review and update the documentation to accurately reflect any recent code changes. Focus on keeping the documentation clear, accurate, and up-to-date with the current codebase."
+		}
+		showDiff, _ := cmd.Flags().GetBool("show-diff")
+		noDiff, _ := cmd.Flags().GetBool("no-diff")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		force, _ := cmd.Flags().GetBool("force")
+		stage, _ := cmd.Flags().GetBool("stage")
+		noStage, _ := cmd.Flags().GetBool("no-stage")
+		verbose := viper.GetBool("verbose")
 
-func init() {
-	rootCmd.AddCommand(docsCmd)
+		// Handle --no-diff and --no-stage flags
+		if noDiff {
+			showDiff = false
+		}
+		if noStage {
+			stage = false
+		}
 
-	docsCmd.Flags().StringP("prompt", "p", "", "Prompt describing the documentation update goal (required)")
-	docsCmd.Flags().StringP("scope", "s", "", "Scope of documentation update (e.g., section name)")
-	docsCmd.Flags().Bool("show-diff", true, "Show diff of proposed changes")
-	docsCmd.Flags().Bool("no-diff", false, "Do not show diffs of proposed changes")
-	docsCmd.Flags().Bool("dry-run", false, "Show proposed changes without applying them")
-	docsCmd.Flags().BoolP("force", "f", false, "Apply changes without confirmation")
-	docsCmd.Flags().Bool("stage", true, "Stage modified files in git")
-	docsCmd.Flags().Bool("no-stage", false, "Do not stage modified files in git")
-
-	docsCmd.MarkFlagRequired("prompt")
-}
-
-func runDocs(cmd *cobra.Command, args []string) error {
-	// Get flags
-	prompt, _ := cmd.Flags().GetString("prompt")
-	showDiff, _ := cmd.Flags().GetBool("show-diff")
-	noDiff, _ := cmd.Flags().GetBool("no-diff")
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	force, _ := cmd.Flags().GetBool("force")
-	stage, _ := cmd.Flags().GetBool("stage")
-	noStage, _ := cmd.Flags().GetBool("no-stage")
-	verbose := viper.GetBool("verbose")
-
-	// Handle --no-diff and --no-stage flags
-	if noDiff {
-		showDiff = false
-	}
-	if noStage {
-		stage = false
-	}
-
-	// Set flags in viper for other packages to access
-	viper.Set("docs.show_diff", showDiff)
-	viper.Set("docs.stage", stage)
-
-	// Initialize LLM client
-	if err := config.LoadConfig(); err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-	cfg := &config.GlobalConfig
-
-	llmClient, err := llm.NewLLMClient(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to initialize LLM client: %w", err)
-	}
-
-	// Get target path
-	targetPath := args[0]
-	info, err := os.Stat(targetPath)
-	if err != nil {
-		return fmt.Errorf("failed to access target path %s: %w", targetPath, err)
-	}
-
-	var filesToProcess []string
-
-	// Process directory or single file
-	if info.IsDir() {
-		// Walk directory to find documentation files
-		err := filepath.Walk(targetPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			// Skip directories and hidden files/directories
-			if info.IsDir() || strings.HasPrefix(info.Name(), ".") {
-				return nil
-			}
-
-			// Skip common build directories and binary files
-			if shouldSkipPath(path) {
-				return nil
-			}
-
-			// Check if file is likely a documentation file
-			if isLikelyDocFile(path) {
-				filesToProcess = append(filesToProcess, path)
-			}
-
-			return nil
-		})
+		// Get repository root
+		repoRoot, err := git.GetRepoRoot()
 		if err != nil {
-			return fmt.Errorf("failed to walk directory %s: %w", targetPath, err)
-		}
-	} else {
-		// Single file
-		if !isLikelyDocFile(targetPath) {
-			return fmt.Errorf("file %s does not appear to be a documentation file", targetPath)
-		}
-		filesToProcess = []string{targetPath}
-	}
-
-	if len(filesToProcess) == 0 {
-		return fmt.Errorf("no documentation files found to process in %s", targetPath)
-	}
-
-	// Process each file
-	var (
-		totalFiles     = len(filesToProcess)
-		changedFiles   = 0
-		errorFiles     = 0
-		skippedFiles   = 0
-		appliedChanges = 0
-	)
-
-	for _, file := range filesToProcess {
-		if verbose {
-			log.Printf("Processing %s...", file)
+			return fmt.Errorf("failed to get repository root: %w", err)
 		}
 
-		// Read file content
-		content, err := os.ReadFile(file)
-		if err != nil {
-			log.Printf("Error reading %s: %v", file, err)
-			errorFiles++
-			continue
+		// Load config
+		if err := config.LoadConfig(); err != nil {
+			return fmt.Errorf("failed to load config: %w", err)
 		}
+		cfg := &config.GlobalConfig
 
 		// Get git diff for context
 		gitDiff, err := git.GetStagedDiff()
 		if err != nil {
 			log.Printf("Warning: Could not get git diff: %v", err)
-			gitDiff = ""
+			// Continue without diff context
 		}
 
-		// Create documentation update prompt
-		updatePrompt := fmt.Sprintf(`
+		// Initialize LLM client
+		client, err := llm.NewLLMClient(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to initialize LLM client: %w", err)
+		}
+
+		// Get target path (default to current directory if not specified)
+		targetPath := "."
+		if len(args) > 0 {
+			targetPath = args[0]
+		}
+
+		// Process directory or single file
+		info, err := os.Stat(targetPath)
+		if err != nil {
+			return fmt.Errorf("failed to access target path %s: %w", targetPath, err)
+		}
+
+		if info.IsDir() {
+			// Process all documentation files in the directory
+			ignorer, err := gitignore.CompileIgnoreFile(filepath.Join(repoRoot, ".gitignore"))
+			if err != nil {
+				log.Printf("Warning: Could not load .gitignore: %v", err)
+			}
+
+			var processed, changed, errors, skipped int
+			err = walker.WalkProjectFiles(repoRoot, targetPath, ignorer, func(repoRoot, filePathRel string, lang string, d fs.DirEntry) error {
+				// Only process markdown files
+				if lang != "markdown" {
+					skipped++
+					return nil
+				}
+
+				processed++
+				absPath := filepath.Join(repoRoot, filePathRel)
+
+				// Read file content
+				content, err := os.ReadFile(absPath)
+				if err != nil {
+					errors++
+					log.Printf("Error reading %s: %v", filePathRel, err)
+					return nil
+				}
+
+				// Create documentation update prompt
+				updatePrompt := fmt.Sprintf(`
 You are an expert technical writer specializing in clear and accurate documentation.
 Your task is to update the provided documentation based on code changes, ensuring it remains accurate and helpful.
 
@@ -224,128 +188,258 @@ If the changes are too extensive or complex for the edit format, provide the com
 `+"```"+`
 `, prompt, gitDiff, string(content))
 
-		// Call LLM
-		response, err := llmClient.Generate(cmd.Context(), updatePrompt, cfg.LLM.Model)
-		if err != nil {
-			log.Printf("Error generating documentation update for %s: %v", file, err)
-			errorFiles++
-			continue
-		}
+				// Get LLM response
+				response, err := client.Generate(cmd.Context(), updatePrompt, cfg.LLM.Model)
+				if err != nil {
+					errors++
+					log.Printf("Error getting LLM response for %s: %v", filePathRel, err)
+					return nil
+				}
 
-		// Handle "NO_UPDATE_NEEDED" response
-		if strings.TrimSpace(response) == "NO_UPDATE_NEEDED" {
-			if verbose {
-				log.Printf("No updates needed for %s", file)
-			}
-			skippedFiles++
-			continue
-		}
+				// Handle "NO_UPDATE_NEEDED" response
+				if strings.TrimSpace(response) == "NO_UPDATE_NEEDED" {
+					if verbose {
+						log.Printf("No updates needed for %s", filePathRel)
+					}
+					skipped++
+					return nil
+				}
 
-		// Parse the LLM response for edits or full file content
-		edits, fullContent, err := editor.ParseLLMResponse(response)
-		if err != nil {
-			log.Printf("Error parsing LLM response for %s: %v", file, err)
-			errorFiles++
-			continue
-		}
+				// Apply changes using editor package
+				edits, fullContent, err := editor.ParseLLMResponse(response)
+				if err != nil {
+					errors++
+					log.Printf("Error parsing LLM response for %s: %v", filePathRel, err)
+					return nil
+				}
 
-		var newContent string
-		if fullContent != "" {
-			newContent = fullContent
-		} else if len(edits) > 0 {
-			// Apply the parsed edits
-			newContent, err = editor.ApplyEdits(string(content), edits)
+				var newContent string
+				if fullContent != "" {
+					newContent = fullContent
+				} else if len(edits) > 0 {
+					newContent, err = editor.ApplyEdits(string(content), edits)
+					if err != nil {
+						errors++
+						log.Printf("Error applying edits to %s: %v", filePathRel, err)
+						return nil
+					}
+				}
+
+				if newContent != "" {
+					// Show diff if enabled
+					if showDiff {
+						fmt.Printf("\n--- Proposed Changes for: %s ---\n", filePathRel)
+						diff.ShowDiff(string(content), newContent)
+						fmt.Println("------------------------------------")
+					}
+
+					// Apply changes if not in dry-run mode and either forced or confirmed
+					if !dryRun && (force || confirmChanges(filePathRel)) {
+						if err := os.WriteFile(absPath, []byte(newContent), 0644); err != nil {
+							errors++
+							log.Printf("Error writing changes to %s: %v", filePathRel, err)
+							return nil
+						}
+
+						// Stage changes if requested
+						if stage {
+							if err := git.AddFiles([]string{filePathRel}); err != nil {
+								log.Printf("Warning: Could not stage changes for %s: %v", filePathRel, err)
+							}
+							// Commit changes
+							if err := git.Commit("docs: Update documentation based on code changes"); err != nil {
+								log.Printf("Warning: Could not commit changes for %s: %v", filePathRel, err)
+							}
+						}
+
+						changed++
+						fmt.Printf("Updated %s\n", filePathRel)
+					} else if !dryRun {
+						skipped++
+					} else {
+						changed++
+					}
+				}
+
+				return nil
+			})
+
 			if err != nil {
-				log.Printf("Error applying edits for %s: %v", file, err)
-				errorFiles++
-				continue
+				return fmt.Errorf("error walking project files: %w", err)
 			}
+
+			// Print summary
+			fmt.Printf("\nSummary:\n")
+			fmt.Printf("Total files processed: %d\n", processed)
+			fmt.Printf("Files changed: %d\n", changed)
+			fmt.Printf("Files with errors: %d\n", errors)
+			fmt.Printf("Files skipped: %d\n", skipped)
+
+			return nil
 		} else {
-			log.Printf("No changes proposed for %s", file)
-			skippedFiles++
-			continue
-		}
-
-		// Show diff if enabled
-		if showDiff {
-			fmt.Printf("\n--- Proposed Changes for: %s ---\n", file)
-			diff.ShowDiff(string(content), newContent)
-			fmt.Println("------------------------------------")
-		}
-
-		// Apply changes if not in dry-run mode and either forced or confirmed
-		if !dryRun && (force || confirmChanges(&refactor.RefactorResult{FilePath: file})) {
-			if err := os.WriteFile(file, []byte(newContent), 0644); err != nil {
-				log.Printf("Error writing changes to %s: %v", file, err)
-				errorFiles++
-				continue
+			// Process single file
+			// Get relative path for standards matching
+			relPath, err := filepath.Rel(repoRoot, targetPath)
+			if err != nil {
+				return fmt.Errorf("failed to get relative path: %w", err)
 			}
 
-			// Stage changes if requested
-			if stage {
-				if err := git.AddFiles([]string{file}); err != nil {
-					log.Printf("Warning: Could not stage changes for %s: %v", file, err)
+			// Read file content
+			content, err := os.ReadFile(targetPath)
+			if err != nil {
+				return fmt.Errorf("failed to read file: %w", err)
+			}
+
+			// Create documentation update prompt
+			updatePrompt := fmt.Sprintf(`
+You are an expert technical writer specializing in clear and accurate documentation.
+Your task is to update the provided documentation based on code changes, ensuring it remains accurate and helpful.
+
+USER'S DOCUMENTATION UPDATE GOAL:
+%s
+
+CONTEXT (Code Changes):
+--- CONTEXT START ---
+%s
+--- CONTEXT END ---
+
+TARGET DOCUMENTATION:
+--- TARGET START ---
+%s
+--- TARGET END ---
+
+IMPORTANT INSTRUCTIONS:
+1. Only update the documentation if necessary based on the code changes.
+2. Focus on changes to:
+   - Function signatures
+   - Parameters
+   - Return types
+   - Added/removed features
+   - Usage examples
+   - Clarifications based on code changes
+3. Do not make unnecessary changes or add speculative information.
+4. Preserve existing formatting and style.
+5. If no updates are needed, respond with exactly: NO_UPDATE_NEEDED
+
+OUTPUT FORMAT:
+If changes are needed, provide them in one of these formats:
+
+1. For replacing existing content:
+--- LLMIFY REPLACE START ---
+<<< ORIGINAL >>>
+[The exact lines to be replaced]
+<<< REPLACEMENT >>>
+[The new lines to replace the original block]
+--- LLMIFY REPLACE END ---
+
+2. For inserting new content:
+--- LLMIFY INSERT_AFTER START ---
+<<< CONTEXT_LINE >>>
+[The exact line content *immediately preceding* the desired insertion point]
+<<< INSERTION >>>
+[The new lines to be inserted]
+--- LLMIFY INSERT_AFTER END ---
+
+3. For deleting content:
+--- LLMIFY DELETE START ---
+<<< CONTENT >>>
+[The exact lines to be deleted]
+--- LLMIFY DELETE END ---
+
+If the changes are too extensive or complex for the edit format, provide the complete updated content enclosed in triple backticks:
+`+"```"+`markdown
+[Complete updated content]
+`+"```"+`
+`, prompt, gitDiff, string(content))
+
+			// Get LLM response
+			response, err := client.Generate(cmd.Context(), updatePrompt, cfg.LLM.Model)
+			if err != nil {
+				return fmt.Errorf("failed to get LLM response: %w", err)
+			}
+
+			// Handle "NO_UPDATE_NEEDED" response
+			if strings.TrimSpace(response) == "NO_UPDATE_NEEDED" {
+				if verbose {
+					log.Printf("No updates needed for %s", relPath)
+				}
+				return nil
+			}
+
+			// Apply changes using editor package
+			edits, fullContent, err := editor.ParseLLMResponse(response)
+			if err != nil {
+				return fmt.Errorf("failed to parse LLM response: %w", err)
+			}
+
+			var newContent string
+			if fullContent != "" {
+				newContent = fullContent
+			} else if len(edits) > 0 {
+				newContent, err = editor.ApplyEdits(string(content), edits)
+				if err != nil {
+					return fmt.Errorf("failed to apply edits: %w", err)
 				}
 			}
 
-			appliedChanges++
-			changedFiles++
-		} else if !dryRun {
-			skippedFiles++
-		} else {
-			changedFiles++
+			if newContent != "" {
+				// Show diff if enabled
+				if showDiff {
+					fmt.Printf("\n--- Proposed Changes for: %s ---\n", relPath)
+					diff.ShowDiff(string(content), newContent)
+					fmt.Println("------------------------------------")
+				}
+
+				// Apply changes if not in dry-run mode and either forced or confirmed
+				if !dryRun && (force || confirmChanges(relPath)) {
+					if err := os.WriteFile(targetPath, []byte(newContent), 0644); err != nil {
+						return fmt.Errorf("failed to write changes: %w", err)
+					}
+
+					// Stage changes if requested
+					if stage {
+						if err := git.AddFiles([]string{relPath}); err != nil {
+							log.Printf("Warning: Could not stage changes for %s: %v", relPath, err)
+						}
+						// Commit changes
+						if err := git.Commit("docs: Update documentation based on code changes"); err != nil {
+							log.Printf("Warning: Could not commit changes for %s: %v", relPath, err)
+						}
+					}
+
+					fmt.Printf("Updated %s\n", relPath)
+				} else if !dryRun {
+					fmt.Printf("Changes not applied to %s\n", relPath)
+				} else {
+					fmt.Printf("Would update %s\n", relPath)
+				}
+			} else {
+				fmt.Printf("No changes needed for %s\n", relPath)
+			}
+
+			return nil
 		}
-	}
-
-	// Print summary
-	fmt.Printf("\nSummary:\n")
-	fmt.Printf("Total files processed: %d\n", totalFiles)
-	fmt.Printf("Files with changes: %d\n", changedFiles)
-	fmt.Printf("Files with errors: %d\n", errorFiles)
-	fmt.Printf("Files skipped: %d\n", skippedFiles)
-	if !dryRun {
-		fmt.Printf("Changes applied: %d\n", appliedChanges)
-	}
-
-	return nil
+	},
 }
 
-// isLikelyDocFile returns true if the file is likely a documentation file
-func isLikelyDocFile(path string) bool {
-	// Common documentation file extensions and names
-	docExtensions := []string{
-		".md", ".mdx", // Markdown
-		".rst",               // reStructuredText
-		".txt",               // Plain text
-		".adoc", ".asciidoc", // AsciiDoc
-		".wiki", // Wiki markup
-		".org",  // Org mode
-		".pod",  // Perl POD
-		".tex",  // LaTeX
-	}
+func init() {
+	rootCmd.AddCommand(docsCmd)
 
-	docFileNames := []string{
-		"readme", "changelog", "contributing", "license", "authors",
-		"install", "installation", "setup", "getting-started",
-		"api", "reference", "manual", "guide", "tutorial",
-		"faq", "troubleshooting", "support",
-	}
+	// Add flags
+	docsCmd.Flags().StringP("prompt", "p", "", "Prompt describing the documentation update goal (optional, defaults to general update)")
+	docsCmd.Flags().StringP("scope", "s", "", "Scope of documentation update (e.g., section name)")
+	docsCmd.Flags().Bool("show-diff", true, "Show diff of proposed changes")
+	docsCmd.Flags().Bool("no-diff", false, "Do not show diffs of proposed changes")
+	docsCmd.Flags().Bool("dry-run", false, "Show proposed changes without applying them")
+	docsCmd.Flags().BoolP("force", "f", false, "Apply changes without confirmation")
+	docsCmd.Flags().Bool("stage", true, "Stage modified files in git")
+	docsCmd.Flags().Bool("no-stage", false, "Do not stage modified files in git")
+}
 
-	// Check extension
-	ext := strings.ToLower(filepath.Ext(path))
-	for _, docExt := range docExtensions {
-		if ext == docExt {
-			return true
-		}
-	}
-
-	// Check filename
-	base := strings.ToLower(strings.TrimSuffix(filepath.Base(path), ext))
-	for _, docName := range docFileNames {
-		if base == docName {
-			return true
-		}
-	}
-
-	return false
+// confirmChanges prompts the user to confirm changes to a file
+func confirmChanges(filePath string) bool {
+	fmt.Printf("Apply changes to %s? [y/N] ", filePath)
+	var response string
+	fmt.Scanln(&response)
+	return strings.ToLower(response) == "y"
 }

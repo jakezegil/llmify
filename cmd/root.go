@@ -35,6 +35,11 @@ func init() {
 	// Bind flags to viper
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 	viper.BindPFlag("llm.timeout_seconds", rootCmd.PersistentFlags().Lookup("llm-timeout"))
+
+	// Add all commands
+	rootCmd.AddCommand(CommitCmd)
+	rootCmd.AddCommand(docsCmd)
+	rootCmd.AddCommand(refactorCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
