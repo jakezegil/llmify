@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -40,7 +41,7 @@ func LoadConfig() error {
 
 	// 1. Set Defaults
 	v.SetDefault("llm.provider", "openai")
-	v.SetDefault("llm.model", "gpt-4") // Adjust default model as needed
+	v.SetDefault("llm.model", "gpt-4o")
 	v.SetDefault("llm.ollama_base_url", "http://localhost:11434")
 	// Defaults for Commit and Docs models will inherit from llm.model if not set
 
@@ -63,7 +64,32 @@ func LoadConfig() error {
 	v.SetConfigName(".llmifyrc") // Also support .llmifyrc.yaml in project root
 	v.AddConfigPath(".")
 
-	// 3. Read config file (optional)
+	// 3. Load .env files
+	// Try to load .env files in the following order:
+	// 1. Project root .env
+	// 2. Project root .env.local
+	// 3. User home .env
+	// 4. User home .env.local
+	envFiles := []string{
+		".env",
+		".env.local",
+	}
+	if home != "" {
+		envFiles = append(envFiles,
+			filepath.Join(home, ".env"),
+			filepath.Join(home, ".env.local"),
+		)
+	}
+
+	for _, envFile := range envFiles {
+		if err := godotenv.Load(envFile); err != nil {
+			if !os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "Warning: Error loading %s: %v\n", envFile, err)
+			}
+		}
+	}
+
+	// 4. Read config file (optional)
 	err := v.ReadInConfig()
 	if err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -74,7 +100,7 @@ func LoadConfig() error {
 		fmt.Fprintln(os.Stderr, "Info: No config file found, using defaults and environment variables.")
 	}
 
-	// 4. Set environment variable binding
+	// 5. Set environment variable binding
 	v.SetEnvPrefix("LLMIFY") // e.g., LLMIFY_LLM_PROVIDER
 	v.AutomaticEnv()
 	// Allow specific API keys to be picked up directly
@@ -82,7 +108,7 @@ func LoadConfig() error {
 	v.BindEnv("llm.api_key.anthropic", "ANTHROPIC_API_KEY")
 	// Add others as needed
 
-	// 5. Unmarshal into GlobalConfig
+	// 6. Unmarshal into GlobalConfig
 	err = v.Unmarshal(&GlobalConfig)
 	if err != nil {
 		return fmt.Errorf("unable to decode config: %w", err)

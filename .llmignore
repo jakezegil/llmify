@@ -49,3 +49,6 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# llmify
+bin/*

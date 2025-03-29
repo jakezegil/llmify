@@ -128,7 +128,7 @@ llm:
   provider: "openai"
   
   # The default model to use for general tasks
-  model: "gpt-4"
+  model: "gpt-4o"
   
   # Provider-specific settings
   ollama_base_url: "http://localhost:11434"  # Only used for Ollama provider
@@ -136,12 +136,12 @@ llm:
 # Commit-specific settings
 commit:
   # Optional: Override the default model for commit message generation
-  model: "gpt-4"
+  model: "gpt-4o"
 
 # Documentation update settings
 docs:
   # Optional: Override the default model for documentation updates
-  model: "gpt-4"
+  model: "gpt-4o"
 ```
 
 Environment variables can also be used:

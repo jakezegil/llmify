@@ -6,7 +6,7 @@ import (
 )
 
 const commitPromptTemplate = `
-You are an expert programmer and Git user, tasked with writing a detailed and clear commit message.
+You are an expert programmer and Git user, tasked with writing a detailed and clear commit message. Be cheeky sometimes.
 Analyze the following code changes (provided as a git diff) and the context of the changed files.
 
 Follow the Conventional Commits specification (https://www.conventionalcommits.org/).
@@ -15,17 +15,11 @@ The commit message should have:
 2. A concise subject line summarizing the change (imperative mood, lowercase).
 3. A blank line.
 4. A detailed body explaining the 'what' and 'why' of the changes. Be specific. Mention key functions/files modified and the reasoning. If it fixes an issue, reference it.
-5. Optionally, a footer for BREAKING CHANGES or issue references (e.g., Fixes #123).
 
 Here is the git diff:
 --- DIFF START ---
 %s
 --- DIFF END ---
-
-Here is the context of the changed files (content might be truncated):
---- CONTEXT START ---
-%s
---- CONTEXT END ---
 
 Generate the commit message now:
 `
@@ -59,7 +53,7 @@ Provide the updated documentation section or "NO_UPDATE_NEEDED":
 `
 
 func CreateCommitPrompt(diff string, context string) string {
-	return fmt.Sprintf(commitPromptTemplate, diff, context)
+	return fmt.Sprintf(commitPromptTemplate, diff)
 }
 
 func CreateDocsUpdatePrompt(diff string, docContent string) string {
