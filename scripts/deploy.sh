@@ -53,6 +53,28 @@ fi
 CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 echo -e "Current version: ${GREEN}${CURRENT_VERSION}${NC}"
 read -p "New version (leave empty to use current): " NEW_VERSION
+
+# Validate semantic version format if a new version is provided
+if [[ -n "$NEW_VERSION" ]]; then
+    # Ensure version starts with 'v'
+    if [[ ! "$NEW_VERSION" =~ ^v ]]; then
+        NEW_VERSION="v$NEW_VERSION"
+        echo -e "${YELLOW}Added 'v' prefix: ${NEW_VERSION}${NC}"
+    fi
+    
+    # Validate semver format (vX.Y.Z or vX.Y.Z-suffix)
+    if [[ ! "$NEW_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+        echo -e "${RED}Error: Version must follow semantic versioning format (vX.Y.Z or vX.Y.Z-suffix).${NC}"
+        exit 1
+    fi
+    
+    # Check if new version is already a tag
+    if git rev-parse "$NEW_VERSION" >/dev/null 2>&1; then
+        echo -e "${RED}Error: Tag ${NEW_VERSION} already exists.${NC}"
+        exit 1
+    fi
+fi
+
 VERSION=${NEW_VERSION:-$CURRENT_VERSION}
 
 # Remove 'v' prefix for filenames if present
@@ -108,7 +130,14 @@ done
 # Build npm package
 echo -e "${BLUE}Building npm package...${NC}"
 (cd npm && npm version "$VERSION_NUM" --no-git-tag-version && npm install && npm run build)
-echo -e "${GREEN}✓ Built npm package${NC}"
+echo -e "${GREEN}✓ Built npm package with version ${VERSION_NUM}${NC}"
+
+# Verify npm package version matches desired version
+NPM_VERSION=$(cd npm && node -e "console.log(require('./package.json').version)")
+if [ "$NPM_VERSION" != "$VERSION_NUM" ]; then
+    echo -e "${RED}Error: npm package version ($NPM_VERSION) doesn't match expected version ($VERSION_NUM)${NC}"
+    exit 1
+fi
 
 # Create or update changelog
 CHANGELOG_FILE="CHANGELOG.md"
@@ -148,37 +177,60 @@ if [[ $CREATE_RELEASE == "y" ]]; then
     
     # Create a new tag if it's a new version
     if [ "$NEW_VERSION" != "" ]; then
+        echo -e "${BLUE}Adding files to git...${NC}"
         git add "$CHANGELOG_FILE" npm/package.json
+        
+        echo -e "${BLUE}Committing changes...${NC}"
         git commit -m "Release $VERSION"
+        
+        echo -e "${BLUE}Creating annotated git tag...${NC}"
         git tag -a "$VERSION" -m "Release $VERSION"
         echo -e "${GREEN}✓ Created git tag ${VERSION}${NC}"
+    else
+        echo -e "${YELLOW}Using existing tag ${VERSION}${NC}"
+        
+        # Check if tag exists locally
+        if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo -e "${RED}Error: Tag ${VERSION} does not exist locally.${NC}"
+            exit 1
+        fi
     fi
     
     # Create release notes from changelog
     RELEASE_NOTES=$(sed -n "/## ${VERSION}/,/## /p" "$CHANGELOG_FILE" | sed '1d;$d')
     
     # Push to GitHub
-    echo -e "${BLUE}Pushing changes to GitHub...${NC}"
-    git push && git push --tags
+    echo -e "${BLUE}Pushing commits to GitHub...${NC}"
+    git push
+
+    # Only push the current tag instead of all tags
+    echo -e "${BLUE}Pushing tag ${VERSION} to GitHub...${NC}"
+    if git push origin "$VERSION" 2>/dev/null; then
+        echo -e "${GREEN}✓ Pushed tag ${VERSION}${NC}"
+    else
+        echo -e "${YELLOW}Warning: Couldn't push tag ${VERSION}, it may already exist on remote${NC}"
+        # Make sure we have the remote tag locally if it exists
+        git fetch origin tag "$VERSION" 2>/dev/null || true
+    fi
     
     # Create GitHub release
-    echo -e "${BLUE}Creating GitHub release...${NC}"
+    echo -e "${BLUE}Creating GitHub release ${VERSION} (npm: ${VERSION_NUM})...${NC}"
     cd dist/release
     gh release create "$VERSION" \
         --title "$VERSION" \
         --notes "$RELEASE_NOTES" \
         *.tar.gz *.zip
     
-    echo -e "${GREEN}✓ Created GitHub release${NC}"
+    echo -e "${GREEN}✓ Created GitHub release ${VERSION}${NC}"
     
     # Publish npm package
     echo -e "${BLUE}Do you want to publish the npm package?${NC}"
     read -p "Publish npm package? (y/n): " PUBLISH_NPM
     
     if [[ $PUBLISH_NPM == "y" ]]; then
-        echo -e "${BLUE}Publishing npm package...${NC}"
+        echo -e "${BLUE}Publishing npm package version ${VERSION_NUM}...${NC}"
         (cd ../../npm && npm publish)
-        echo -e "${GREEN}✓ Published npm package${NC}"
+        echo -e "${GREEN}✓ Published npm package version ${VERSION_NUM}${NC}"
     fi
 fi
 
