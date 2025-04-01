@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.12 (2025-04-01)
+
+- chore: bump version to 0.0.11 and update changelog
+
+
 ## v0.0.11 (2025-03-29)
 
 
