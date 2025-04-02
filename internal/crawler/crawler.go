@@ -231,7 +231,7 @@ func BuildOutputContent(result *CrawlResult, includeHeader bool) string {
 			content.WriteString(fmt.Sprintf("Error reading file: %v\n\n", err))
 			continue
 		}
-		content.WriteString(util.LimitString(fileContent, 10000))
+		content.WriteString(fileContent)
 		content.WriteString("\n\n")
 	}
 
