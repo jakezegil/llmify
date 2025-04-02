@@ -52,7 +52,40 @@ fi
 # Get or prompt for version
 CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 echo -e "Current version: ${GREEN}${CURRENT_VERSION}${NC}"
-read -p "New version (leave empty to use current): " NEW_VERSION
+read -p "New version (leave empty to use current, +/++/+++ to bump patch/minor/major): " NEW_VERSION
+
+# Handle version bump shortcuts
+if [[ "$NEW_VERSION" == "+" || "$NEW_VERSION" == "++" || "$NEW_VERSION" == "+++" ]]; then
+    # Strip the 'v' prefix
+    VERSION_PARTS=(${CURRENT_VERSION#v//./ })
+    MAJOR=${VERSION_PARTS[0]#v}
+    MINOR=${VERSION_PARTS[1]}
+    PATCH=${VERSION_PARTS[2]}
+    
+    # Split by dots while handling the v prefix
+    IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT_VERSION#v}"
+    
+    case "$NEW_VERSION" in
+        "+")
+            # Bump patch
+            PATCH=$((PATCH + 1))
+            ;;
+        "++")
+            # Bump minor, reset patch
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+        "+++")
+            # Bump major, reset minor and patch
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+    esac
+    
+    NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+    echo -e "${BLUE}Bumping version to: ${NEW_VERSION}${NC}"
+fi
 
 # Validate semantic version format if a new version is provided
 if [[ -n "$NEW_VERSION" ]]; then
