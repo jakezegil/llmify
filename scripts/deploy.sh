@@ -39,6 +39,11 @@ mkdir -p dist/release
 # Ensure npm/bin directory exists
 mkdir -p npm/bin
 
+# Clean release folder
+echo -e "${BLUE}Cleaning release folder...${NC}"
+rm -rf dist/release/*
+echo -e "${GREEN}✓ Release folder cleaned${NC}"
+
 # Check for uncommitted changes
 if ! git diff-index --quiet HEAD --; then
     echo -e "${YELLOW}Warning: You have uncommitted changes.${NC}"
@@ -134,7 +139,7 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     fi
     
     echo -e "${BLUE}Building for ${GOOS}/${GOARCH}...${NC}"
-    GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.buildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o "dist/release/${BINARY_NAME}" .
+    GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-X main.version=${VERSION} -X main.buildTime=$(date -u '+%Y-%m-%d_%H:%M:%S') -w -s" -o "dist/release/${BINARY_NAME}" .
     
     # Copy binary to npm/bin directory
     cp "dist/release/${BINARY_NAME}" "${NPM_BINARY_NAME}"
@@ -201,9 +206,15 @@ mv "$TEMP_CHANGELOG" "$CHANGELOG_FILE"
 
 echo -e "${GREEN}✓ Updated changelog${NC}"
 
-# Create GitHub release
+# Ask about both GitHub and npm upfront
 echo -e "${BLUE}Do you want to create a GitHub release? (This requires gh CLI)${NC}"
 read -p "Create GitHub release? (y/n): " CREATE_RELEASE
+
+PUBLISH_NPM="n"
+if [[ $CREATE_RELEASE == "y" ]]; then
+    echo -e "${BLUE}Do you want to publish the npm package?${NC}"
+    read -p "Publish npm package? (y/n): " PUBLISH_NPM
+fi
 
 if [[ $CREATE_RELEASE == "y" ]]; then
     echo -e "${BLUE}Creating GitHub release...${NC}"
@@ -256,10 +267,7 @@ if [[ $CREATE_RELEASE == "y" ]]; then
     
     echo -e "${GREEN}✓ Created GitHub release ${VERSION}${NC}"
     
-    # Publish npm package
-    echo -e "${BLUE}Do you want to publish the npm package?${NC}"
-    read -p "Publish npm package? (y/n): " PUBLISH_NPM
-    
+    # Publish npm package if user agreed
     if [[ $PUBLISH_NPM == "y" ]]; then
         echo -e "${BLUE}Publishing npm package version ${VERSION_NUM}...${NC}"
         (cd ../../npm && npm publish)
