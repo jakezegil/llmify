@@ -92,6 +92,58 @@ func CreateDefaultLLMIgnoreFile(projectRoot string) error {
 		"*~",
 		".DS_Store",
 		"Thumbs.db",
+		// Large binary files
+		"*.bin",
+		"*.dat",
+		"*.iso",
+		"*.img",
+
+		// IDE and editor files
+		".idea/",
+		".vscode/",
+		".vs/",
+		"*.sublime-*",
+
+		// Build artifacts
+		"*.o",
+		"*.obj",
+		"*.a",
+		"*.lib",
+		"*.pyc",
+		"*.pyo",
+		"__pycache__/",
+		".pytest_cache/",
+
+		// Package manager directories
+		"bower_components/",
+		"jspm_packages/",
+		".pnpm-store/",
+
+		// Test coverage and reports
+		"coverage/",
+		".nyc_output/",
+		"test-results/",
+		"cypress/videos/",
+		"cypress/screenshots/",
+
+		// Temporary directories
+		"tmp/",
+		"temp/",
+		"logs/",
+
+		// Configuration files that might contain secrets
+		".env",
+		".env.local",
+		".env.*.local",
+
+		// Generated documentation
+		"docs/_build/",
+		"_site/",
+		".docusaurus/",
+		".vuepress/dist/",
+
+		// Output file itself
+		"llm.txt",
 	}
 
 	content := strings.Join(defaultPatterns, "\n")

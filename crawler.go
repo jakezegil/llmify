@@ -139,6 +139,7 @@ func CreateDefaultLLMIgnoreFile(rootDir string) error {
 		"public/robots.txt",
 		"public/feed.xml",
 		".next/",
+		"llm.txt",
 	}
 
 	// Join lines with newlines and write to file
