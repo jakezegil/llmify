@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.0.13 (2025-04-01)
+
+- berr
+- feat: enhance version bumping in deploy script
+- refactor: update .llmignore patterns for better coverage
+- feat: add clipboard functionality and enhance documentation
+- chore: bump version to 0.0.12 and enhance deployment script
+
+
 ## v0.0.12 (2025-04-01)
 
 
