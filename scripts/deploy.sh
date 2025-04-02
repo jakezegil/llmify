@@ -143,8 +143,8 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     # Create archive
     pushd dist/release > /dev/null
     
-    cp ../README.md .
-    cp ../LICENSE . 2>/dev/null || echo "No LICENSE file found"
+    cp ../../README.md .
+    cp ../../LICENSE . 2>/dev/null || echo "No LICENSE file found"
     
     if [ "$GOOS" = "windows" ]; then
         zip -q "${ARCHIVE_NAME}" "${BINARY_NAME}" README.md LICENSE 2>/dev/null
