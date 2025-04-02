@@ -1,46 +1,54 @@
 # 🚀 LLMify
 
-> **A CLI tool that generates a comprehensive text file containing your codebase context for Large Language Models (LLMs)**
+> **A collection of tools that optimize your codebase for LLMs and agents**
 
 [![npm version](https://img.shields.io/npm/v/llmify.svg?style=flat-square)](https://www.npmjs.com/package/llmify)
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/username/llmify/blob/main/LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/username/llmify/pulls)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/jakezegil/llmify/blob/main/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/jakezegil/llmify/pulls)
+
+LLMify is made for LLMs by LLMs - a suite of powerful tools that transform your codebase into the perfect context for AI agents. Get started with a single command: `npx llmify`
 
 ## ✨ Features
 
-- 📊 **Visual Project Structure** - Crawls project directories and creates a tree structure
-- 📄 **File Content Extraction** - Includes the content of all relevant text files
-- 🧠 **Context Optimization** - Formats output in a way that's optimized for LLM context
-- 🔍 **Intelligent Filtering** - Respects `.gitignore` and `.llmignore` patterns
-- 🛠️ **Highly Customizable** - Control depth, paths, include/exclude patterns
+- 📊 **Visual Project Structure** - Creates a tree view of your codebase
+- 📄 **Smart Content Extraction** - Pulls content from all relevant files
+- 🧠 **Context Optimization** - Formats output specifically for LLMs
+- 🔍 **Intelligent Filtering** - Respects `.gitignore` and auto-creates `.llmignore`
+- 🛠️ **Highly Customizable** - Control depth, paths, and patterns
+- 💬 **AI-Powered Commit Messages** - Generate detailed commit messages using LLMs
+- 📝 **Documentation Updates** - Automatically update docs based on code changes
+- 🔄 **Code Refactoring** - Refactor TypeScript code using LLMs based on custom prompts
+
+## 🔥 Why LLMify?
+
+Getting the right context to an LLM is critical for quality results. LLMify solves this by:
+
+- **Saving Time** - No more manual file copying or writing commit messages
+- **Improving Responses** - Gives LLMs better structural understanding of your codebase
+- **Reducing Token Usage** - Smart filtering excludes irrelevant files
+- **Working Everywhere** - Supports all major platforms
+- **Better Commits** - Generate clear, conventional commit messages
+- **Up-to-Date Docs** - Keep documentation in sync with code changes
+- **Efficient Refactoring** - Automate code refactoring with precision and control
 
 ## 📦 Installation
 
-### Pre-built Binaries
-
-Download the appropriate binary for your platform from the [Releases page](https://github.com/username/llmify/releases).
-
-### Build from Source
+### NPM (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/username/llmify.git
-cd llmify
-
-# Build the binary
-go build -o llmify .
-# Or on Windows: go build -o llmify.exe .
-
-# Optional: Move to a directory in your PATH
-# Linux/macOS
-sudo mv llmify /usr/local/bin/
-# Or for user-local installation: mv llmify ~/bin/
+npm install -g llmify
 ```
+
+### Direct Download
+
+Grab the [latest release](https://github.com/jakezegil/llmify/releases) for your platform.
 
 ## 🚀 Quick Start
 
+Generate context for your current directory:
+
 ```bash
-# Basic usage - creates llm.txt in the current directory
+# Creates llm.txt in current directory
 llmify
 
 # Paste into your favorite LLM
@@ -49,74 +57,170 @@ cat llm.txt | xclip   # Linux
 type llm.txt | clip   # Windows
 ```
 
-## 👩‍💻 Usage Examples
+Generate a commit message for staged changes:
 
 ```bash
-# Specify a different root directory
-llmify /path/to/your/project
+# Stage your changes
+git add .
 
-# Specify a different output file
-llmify -o context_for_gpt.txt
+# Generate and edit commit message
+llmify commit
 
-# Only include content from a specific subdirectory or file
+# Force commit without confirmation
+llmify commit -f
+
+# Update docs and commit
+llmify commit --docs
+```
+
+## 👩‍💻 Usage Examples
+
+### Context Generation
+
+```bash
+# Specify a different project
+llmify /path/to/project
+
+# Only include a specific subdirectory
 llmify -p src/components
-llmify --path main.go
 
-# Exclude specific patterns
-llmify -e "*.log" -e "**/.cache/*"
-
-# Include specific files that would otherwise be excluded
-llmify -i "config/important.json"
+# Custom output file 
+llmify -o context_for_llm.txt
 
 # Limit directory depth for large projects
-llmify -d 3
+llmify -d 3 
 
-# Disable .gitignore processing
-llmify --no-gitignore
+# Exclude specific files
+llmify -e "*.test.js" -e "**/__mocks__/*"
 
-# See detailed output (helpful for debugging)
+# Include files that would otherwise be excluded
+llmify -i "important-config.json"
+
+# See what's happening (helpful for debugging)
 llmify -v
 ```
 
-## 🔧 Using `.llmignore`
+### Commit Message Generation
 
-Create a `.llmignore` file in your project's root directory to specify patterns that should be excluded from LLM context. This uses the same syntax as `.gitignore`. These rules apply *after* the `--path` filter, if used.
+```bash
+# Generate commit message with default settings
+llmify commit
 
-Example `.llmignore`:
+# Skip confirmation prompt
+llmify commit -f
 
-```
-# Exclude large data files
-data/*.csv
-*.json.gz
+# Update docs and commit
+llmify commit --docs
 
-# Exclude generated documentation
-docs/generated/
+# Disable editing commit message
+llmify commit --no-edit
 
-# Exclude specific libraries
-lib/external/
-```
+# Verbose output
+llmify commit -v
 
-## 🎯 Full CLI Options
-
-```
-Usage:
-  llmify [directory] [flags]
-
-Flags:
-  -e, --exclude strings      Glob patterns to exclude (can be used multiple times)
-      --exclude-binary       Attempt to exclude binary files based on content detection (default: true)
-      --header               Include a header with project info (default: true)
-  -i, --include strings      Glob patterns to include (overrides excludes, use carefully)
-  -d, --max-depth int        Maximum directory depth to crawl (0 for unlimited)
-      --no-gitignore         Do not use .gitignore rules
-      --no-llmignore         Do not use .llmignore rules
-  -o, --output string        Name of the output file (default "llm.txt")
-  -p, --path string          Only include files/directories within this specific relative path
-  -v, --verbose              Enable verbose logging
-  -h, --help                 Display help information
+# Set LLM timeout (in seconds)
+llmify commit --llm-timeout 60
 ```
 
-## 💡 Example Output
+### Documentation Update
+
+```bash
+# Analyze staged changes for documentation updates
+llmify docs
+
+# Analyze the last 5 commits
+llmify docs --commits 5
+
+# Interactively select specific commits to analyze
+llmify docs --interactive
+
+# Specify a path to focus on
+llmify docs --path src/
+
+# Dry run without applying changes
+llmify docs --dry-run
+
+# Apply changes without confirmation
+llmify docs --force
+
+# Do not stage updated documentation files
+llmify docs --no-stage
+
+# Use a custom prompt for LLM
+llmify docs --prompt "Focus on API changes."
+```
+
+### Code Refactoring
+
+```bash
+# Refactor a specific file or directory
+llmify refactor src/app.ts
+
+# Provide a custom refactoring prompt
+llmify refactor src/app.ts --prompt "Simplify arrow functions"
+
+# Skip type checking
+llmify refactor src/app.ts --no-check-types
+
+# Display the proposed diff before applying changes
+llmify refactor src/app.ts --show-diff
+
+# Directly apply changes without confirmation
+llmify refactor src/app.ts --apply --force
+
+# Execute a dry run, showing proposed changes without applying them
+llmify refactor src/app.ts --dry-run
+```
+
+## ⚙️ Configuration
+
+LLMify can be configured via a `.llmifyrc.yaml` file in your project root or `~/.config/llmify/config.yaml`:
+
+```yaml
+# LLM Configuration
+llm:
+  # The LLM provider to use (e.g., "openai", "anthropic", "ollama")
+  provider: "openai"
+  
+  # The default model to use for general tasks
+  model: "gpt-4o"
+  
+  # Provider-specific settings
+  ollama_base_url: "http://localhost:11434"  # Only used for Ollama provider
+
+# Commit-specific settings
+commit:
+  # Optional: Override the default model for commit message generation
+  model: "gpt-4o"
+
+# Documentation update settings
+docs:
+  # Optional: Override the default model for documentation updates
+  model: "gpt-4o"
+```
+
+Environment variables can also be used:
+- `LLMIFY_LLM_PROVIDER` - Set the LLM provider
+- `LLMIFY_LLM_MODEL` - Set the default model
+- `OPENAI_API_KEY` - OpenAI API key
+- `ANTHROPIC_API_KEY` - Anthropic API key
+
+## 🔧 `.llmignore` - Control What's Included
+
+LLMify automatically creates a `.llmignore` file with sensible defaults. Customize it to exclude any files irrelevant to your LLM conversations:
+
+```
+# Example .llmignore
+*.min.js
+*.csv
+node_modules/
+dist/
+coverage/
+```
+
+## 🎯 Example Output
+
+The generated file has a clean, LLM-friendly structure:
 
 <details>
 <summary>Click to see example output</summary>
@@ -166,29 +270,34 @@ func main() {
     fmt.Println("Hello, world!")
 }
 ```
-
----
-
-### File: utils.go
-
-```go
-package main
-
-// ... file content here ...
 ```
-```
-
 </details>
+
+## 💡 Pro Tips
+
+- Include a `.llmignore` in your project templates
+- Use with `--path` to focus on specific parts of your codebase
+- Combine with project-specific prompts for best results
+- For very large codebases, use `-d` to limit directory depth
+- Use `llmify commit --docs` to keep documentation in sync
+- Configure different models for different tasks in `.llmifyrc.yaml`
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+- Report bugs
+- Suggest features
+- Submit pull requests
 
 ## 📝 License
 
-MIT License - See LICENSE file for details.
+[MIT](https://github.com/jakezegil/llmify/blob/main/LICENSE) © Jake Zegil
 
 ---
 
 <p align="center">
   Made with ❤️ for better LLM interactions
   <br>
-  <a href="https://github.com/username/llmify">Star on GitHub</a>
-</p> 
-
+  <a href="https://github.com/jakezegil/llmify">Star on GitHub</a> •
+  <a href="https://www.npmjs.com/package/llmify">View on npm</a>
+</p>

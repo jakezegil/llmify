@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/jake/llmify/internal/crawler"
+	"github.com/jake/llmify/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -113,6 +114,12 @@ respecting .gitignore and .llmignore patterns.`,
 			fmt.Printf("Generated %s with %d files included and %d files excluded\n",
 				outputFile, result.IncludedCount, result.ExcludedCount)
 		}
+
+		// Copy output to clipboard if requested
+		if err := util.CopyToClipboard(content); err != nil {
+			return fmt.Errorf("copying to clipboard: %w", err)
+		}
+		fmt.Println("llm.txt copied to clipboard")
 
 		return nil
 	},

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode/utf8"
 )
@@ -207,4 +209,61 @@ func LimitString(s string, maxLen int) string {
 		return s[:safeCut] + "..."
 	}
 	return s
+}
+
+// CopyToClipboard copies a string to the clipboard.
+func CopyToClipboard(content string) error {
+	// For Windows
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("powershell", "-command", "Set-Clipboard", "-Value", content)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("windows clipboard error: %w - %s", err, stderr.String())
+		}
+		return nil
+	}
+
+	// For macOS
+	if runtime.GOOS == "darwin" {
+		cmd := exec.Command("pbcopy")
+		cmd.Stdin = strings.NewReader(content)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("macOS clipboard error: %w", err)
+		}
+		return nil
+	}
+
+	// For Linux/Unix
+	// Try xclip first
+	if _, err := exec.LookPath("xclip"); err == nil {
+		cmd := exec.Command("xclip", "-selection", "clipboard")
+		cmd.Stdin = strings.NewReader(content)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("xclip error: %w", err)
+		}
+		return nil
+	}
+
+	// Try xsel if xclip not available
+	if _, err := exec.LookPath("xsel"); err == nil {
+		cmd := exec.Command("xsel", "--clipboard", "--input")
+		cmd.Stdin = strings.NewReader(content)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("xsel error: %w", err)
+		}
+		return nil
+	}
+
+	// Try wl-copy for Wayland
+	if _, err := exec.LookPath("wl-copy"); err == nil {
+		cmd := exec.Command("wl-copy")
+		cmd.Stdin = strings.NewReader(content)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("wl-copy error: %w", err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("no clipboard utility available")
 }
