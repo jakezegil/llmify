@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.16 (2025-04-02)
+
+- refactor: remove content limitation in output
+- chore: bump version and enhance deploy script
+
+
 ## v0.0.15 (2025-04-01)
 
 
