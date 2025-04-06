@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.20 (2025-04-06)
+
+
+
+
 ## v0.0.20b (2025-04-06)
 
 - updated binaries
